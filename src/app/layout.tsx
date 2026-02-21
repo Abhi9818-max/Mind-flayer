@@ -5,6 +5,7 @@ import { ToastProvider } from "@/lib/context/ToastContext";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { AccountStatusBanner } from "@/components/layout/AccountStatusBanner";
 import { AdaptiveUIDebug } from "@/components/debug/AdaptiveUIDebug";
+import { Analytics } from "@vercel/analytics/next";
 
 export const viewport = {
   themeColor: "#ef4444",
@@ -44,6 +45,7 @@ export default function RootLayout({
           <ToastProvider>
             <AccountStatusBanner />
             {children}
+            <Analytics />
             <ToastContainer />
             <AdaptiveUIDebug />
           </ToastProvider>
