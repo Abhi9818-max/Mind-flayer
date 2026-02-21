@@ -97,21 +97,23 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
 
     // Process the data to ensure correct structure
     const processedPosts = data.map((post: any) => {
-        // If it's a real user post but the joined data is an array (due to supabase relation structure sometimes returning arrays for one-to-one if not explicitly unique)
+        // If it's a real user post but the joined data is an array
         const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
 
         return {
             ...post,
-            // Override author details if anonymous, otherwise use real details
-            author: post.is_anonymous ? {
-                void_name: "Anonymous User",
-                display_name: "Anonymous",
-                avatar_url: null,
-                void_avatar: null
-            } : authorData || {
-                void_name: "Unknown",
-                display_name: "Unknown User"
-            },
+            // If anonymous, we still want to use the profile's 'void' details if it exists
+            author: post.is_anonymous
+                ? {
+                    void_name: authorData?.void_name || "Anonymous User",
+                    display_name: "Anonymous",
+                    avatar_url: null,
+                    void_avatar: authorData?.void_avatar || null
+                }
+                : authorData || {
+                    void_name: "Unknown",
+                    display_name: "Unknown User"
+                },
             // Maps the database UUID to author_id for the UI
             author_id: post.user_id
         };

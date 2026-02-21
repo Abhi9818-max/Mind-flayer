@@ -179,8 +179,16 @@ export function PostCard({
                 >
                     {post.is_anonymous ? (
                         <>
-                            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700/50 group-hover/id:border-zinc-500 transition-colors shadow-sm">
-                                <span className="text-sm">🌑</span>
+                            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700/50 group-hover/id:border-zinc-500 transition-colors shadow-sm overflow-hidden">
+                                {post.author?.void_avatar ? (
+                                    <img
+                                        src={post.author.void_avatar}
+                                        alt="Void Identity"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <span className="text-sm">🌑</span>
+                                )}
                             </div>
                             <div className="text-left">
                                 <span className="block text-sm font-bold text-zinc-400 group-hover/id:text-zinc-200 transition-colors tracking-wide">

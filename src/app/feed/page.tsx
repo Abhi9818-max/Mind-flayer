@@ -87,12 +87,15 @@ function FeedContent() {
     }, []); 
     */
 
-    const handleChatClick = async (postId: string, authorId: string, isAnonymous: boolean) => {
+    const handleChatClick = async (post: any) => {
         try {
-            const targetUserId = authorId || "mock-target-user-id";
-            const chat = await createChat(postId, targetUserId);
+            const targetUserId = post.author_id || "mock-target-user-id";
+            const chat = await createChat(post.id, targetUserId);
             setActiveChatId(chat.id);
-            setActiveChatRecipient(isAnonymous ? "Anonymous User" : "User");
+            const recipientName = post.is_anonymous
+                ? (post.author?.void_name || "Anonymous User")
+                : (post.author?.display_name || "User");
+            setActiveChatRecipient(recipientName);
         } catch (error) {
             console.error("Failed to start chat:", error);
             showToast({
@@ -193,7 +196,7 @@ function FeedContent() {
                                     delay={i * 100} // Stagger by 100ms
                                     // isFocused={focusedPostId === post.id}
                                     onCommentClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
-                                    onChatClick={() => handleChatClick(post.id, post.author_id || "mock-id", post.is_anonymous)}
+                                    onChatClick={() => handleChatClick(post)}
                                 />
 
                                 {/* Inline Comments */}
