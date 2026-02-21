@@ -207,7 +207,15 @@ function FeedContent() {
                                     post={post}
                                     delay={i * 100}
                                     currentUserId={currentUserId || undefined}
-                                    onCommentClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
+                                    onCommentClick={() => {
+                                        // Mobile: navigate to full-page comments
+                                        if (window.innerWidth < 768) {
+                                            router.push(`/comments/${post.id}`);
+                                        } else {
+                                            // Desktop: toggle inline comments
+                                            setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id);
+                                        }
+                                    }}
                                     onChatClick={() => handleChatClick(post)}
                                 />
 

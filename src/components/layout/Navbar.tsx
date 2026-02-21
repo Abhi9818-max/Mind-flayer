@@ -76,6 +76,14 @@ export function Navbar() {
                         <div className="w-20 h-8 bg-zinc-800 rounded animate-pulse" />
                     ) : user ? (
                         <>
+                            {/* Rooms — Mobile Only */}
+                            <Link
+                                href="/rooms"
+                                className="sm:hidden relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                            >
+                                <Radio size={20} />
+                            </Link>
+
                             {/* Notifications */}
                             <Link
                                 href="/notifications"

@@ -80,7 +80,9 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
                 display_name,
                 avatar_url,
                 void_avatar
-            )
+            ),
+            likes(count),
+            comments(count)
         `)
         .order('created_at', { ascending: false });
 
@@ -100,8 +102,14 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
         // If it's a real user post but the joined data is an array
         const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
 
+        // Compute real counts from joined aggregation
+        const realLikeCount = post.likes?.[0]?.count ?? post.like_count ?? 0;
+        const realCommentCount = post.comments?.[0]?.count ?? post.comment_count ?? 0;
+
         return {
             ...post,
+            like_count: realLikeCount,
+            comment_count: realCommentCount,
             // If anonymous, we still want to use the profile's 'void' details if it exists
             author: post.is_anonymous
                 ? {
@@ -115,7 +123,9 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
                     display_name: "Unknown User"
                 },
             // Maps the database UUID to author_id for the UI
-            author_id: post.user_id
+            author_id: post.user_id,
+            // Clean up joined aggregation data
+            likes: undefined,
         };
     });
 
