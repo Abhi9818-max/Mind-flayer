@@ -184,18 +184,18 @@ export default function ProfilePage() {
                         </div>
 
                         {/* ── Buttons ── */}
-                        <div className="flex gap-2.5 mt-5 profile-actions-entry">
+                        <div className="flex gap-2.5 mt-6 profile-actions-entry">
                             <button
                                 onClick={() => setIsEditProfileOpen(true)}
-                                className="h-9 px-5 rounded-xl bg-white text-black text-[13px] font-bold hover:bg-zinc-200 active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
+                                className="h-10 px-6 py-2 rounded-xl bg-white text-black text-sm font-bold hover:bg-zinc-200 active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
                             >
-                                <Edit3 size={13} /> Edit Profile
+                                <Edit3 size={15} /> Edit Profile
                             </button>
                             <button
                                 onClick={handleShare}
-                                className="h-9 px-5 rounded-xl bg-white/[0.07] border border-white/[0.08] text-[13px] font-semibold text-zinc-300 hover:bg-white/[0.12] active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
+                                className="h-10 px-6 py-2 rounded-xl bg-white/[0.07] border border-white/[0.08] text-sm font-semibold text-zinc-300 hover:bg-white/[0.12] active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
                             >
-                                <Share2 size={13} /> Share
+                                <Share2 size={15} /> Share
                             </button>
                         </div>
                     </div>

@@ -89,7 +89,7 @@ export function ComposeModal({ onClose, onSuccess }: { onClose: () => void, onSu
             />
 
             {/* Modal */}
-            <Card className="relative w-full max-w-lg p-0 overflow-hidden shadow-2xl shadow-purple-900/20 animate-fade-in-up border-white/10 !bg-[#0c0c0c]">
+            <Card className="relative w-full max-w-lg p-0 overflow-hidden shadow-2xl shadow-purple-900/20 animate-fade-in-up border-white/10 !bg-[#0c0c0c] rounded-b-none rounded-t-3xl sm:rounded-2xl pb-safe">
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">

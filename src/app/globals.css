@@ -134,6 +134,14 @@ body {
   .spotlight-card:hover::before {
     opacity: 1;
   }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
 }
 
 /* Global Tech Grid Overlay */

@@ -83,7 +83,7 @@ export function ChatWindow({
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 w-80 sm:w-96 flex flex-col overflow-hidden rounded-2xl border border-purple-500/20 bg-zinc-900 shadow-2xl shadow-purple-900/20 animate-fade-in-up">
+        <div className="fixed bottom-0 right-0 sm:bottom-4 sm:right-4 z-50 w-full sm:w-96 h-[85vh] sm:h-auto flex flex-col overflow-hidden rounded-t-3xl sm:rounded-2xl border-t sm:border border-purple-500/20 bg-zinc-900 shadow-2xl shadow-purple-900/20 animate-fade-in-up pb-safe">
             {/* Header */}
             <div className="flex items-center justify-between bg-accent-gradient px-4 py-3">
                 <div className="flex items-center gap-3">

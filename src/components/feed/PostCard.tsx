@@ -135,7 +135,7 @@ export function PostCard({
     return (
         <SpotlightCard
             className={`
-                p-8 transition-all duration-500 ease-out animate-fade-in-up
+                p-5 sm:p-8 transition-all duration-500 ease-out animate-fade-in-up
                 scale-100 opacity-0 shadow-2xl shadow-black/40 translate-y-4 z-10 
                 hover:shadow-red-900/20 hover:-translate-y-1
                 active:scale-[0.99] active:duration-150
