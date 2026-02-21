@@ -23,6 +23,7 @@ interface Post {
         display_name?: string;
         void_name?: string;
         avatar_url?: string;
+        void_avatar?: string;
         username?: string;
     };
     moderation_status?: 'active' | 'under_review' | 'flagged' | 'quarantined';
