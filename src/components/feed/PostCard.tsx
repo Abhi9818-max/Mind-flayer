@@ -6,6 +6,7 @@ import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { haptic } from "@/lib/utils/haptic";
 import { getPostTypeColor } from "@/lib/utils/postTypeColors";
+import { formatPostTime } from "@/lib/utils/formatTime";
 
 // ... existing imports ...
 
@@ -216,25 +217,30 @@ export function PostCard({
                 </button>
 
                 {/* Right: Tag & Time */}
-                <div className="flex items-center gap-3">
-                    <span className={`
-                        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold tracking-wide uppercase shadow-sm
-                        ${styles.badge} transition-transform duration-300 group-hover:scale-105
-                    `}>
-                        <span className="text-sm">{config.icon}</span>
-                        {config.label}
-                    </span>
+                <div className="flex flex-col items-end gap-1.5">
+                    <div className="flex items-center gap-2">
+                        {/* Moderation Status (Mini) */}
+                        {post.moderation_status === 'under_review' && (
+                            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Under Review" />
+                        )}
+                        {post.moderation_status === 'flagged' && (
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" title="Flagged" />
+                        )}
 
-                    {/* Moderation Status (Mini) */}
-                    {post.moderation_status === 'under_review' && (
-                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Under Review" />
-                    )}
-                    {post.moderation_status === 'flagged' && (
-                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" title="Flagged" />
-                    )}
+                        <span className={`
+                            inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold tracking-wide uppercase shadow-sm
+                            ${styles.badge} transition-transform duration-300 group-hover:scale-105
+                        `}>
+                            <span className="text-sm">{config.icon}</span>
+                            {config.label}
+                        </span>
+                    </div>
 
+                    {/* Time relative to post creation */}
                     {(!post.moderation_status || post.moderation_status === 'active') && (
-                        <span className="text-[10px] font-mono text-zinc-600">{post.created_at}</span>
+                        <span className="text-[10px] sm:text-[11px] font-mono text-zinc-500 mr-1">
+                            {formatPostTime(post.created_at)}
+                        </span>
                     )}
                 </div>
             </div>

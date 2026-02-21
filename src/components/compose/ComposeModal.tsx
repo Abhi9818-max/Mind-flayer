@@ -216,7 +216,13 @@ export function ComposeModal({ onClose, onSuccess }: { onClose: () => void, onSu
                         <div className="w-full bg-[#0a0a0c] border-t border-white/5 p-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between relative z-20">
 
                             {/* Left: Anonymity Toggle */}
-                            <label className="flex items-center gap-3 cursor-pointer group w-fit select-none">
+                            <label
+                                className="flex items-center gap-3 cursor-pointer group w-fit select-none"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    setIsAnonymous(!isAnonymous);
+                                }}
+                            >
                                 <div className={`relative h-8 w-14 rounded-full transition-all duration-300 border border-white/10 ${isAnonymous ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'bg-zinc-800'}`}>
                                     <div className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center ${isAnonymous ? 'translate-x-6' : 'translate-x-0'}`}>
                                         {isAnonymous ? <EyeOff size={12} className="text-purple-600" /> : <Eye size={12} className="text-zinc-400" />}
