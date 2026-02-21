@@ -265,7 +265,7 @@ export default function ProfilePage() {
                             ) : (
                                 posts.map((post, i) => (
                                     <div key={post.id} className="animate-fade-in-up" style={{ opacity: 0, animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}>
-                                        <PostCard post={post as any} delay={0} onCommentClick={() => { }} onChatClick={() => { }} />
+                                        <PostCard post={post as any} delay={0} currentUserId={userProfile?.id} onCommentClick={() => { }} onChatClick={() => { }} />
                                     </div>
                                 ))
                             )}
