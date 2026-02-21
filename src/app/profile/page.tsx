@@ -72,11 +72,11 @@ export default function ProfilePage() {
             }).catch(() => {
                 // Fallback to clipboard if share sheet is cancelled or fails
                 navigator.clipboard.writeText(window.location.href);
-                showToast("Profile link copied to clipboard!", "success");
+                showToast({ title: "Profile link copied to clipboard!", type: "success", rank: "primary" });
             });
         } else {
             navigator.clipboard.writeText(window.location.href);
-            showToast("Profile link copied to clipboard!", "success");
+            showToast({ title: "Profile link copied to clipboard!", type: "success", rank: "primary" });
         }
     };
 
