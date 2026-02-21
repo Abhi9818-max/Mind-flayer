@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Navbar } from "@/components/layout/Navbar";
-import { Bookmark, Edit3, MapPin, Sparkles, Eye, TrendingUp, Heart, Users, Settings, Grid3x3, BarChart3, Share2, Crown } from "lucide-react";
+import { Bookmark, Edit3, MapPin, Sparkles, Eye, TrendingUp, Heart, Users, Settings, Grid3x3, BarChart3, Share2, Crown, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { PostCard } from "@/components/feed/PostCard";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { getPosts } from "@/lib/services/posts";
@@ -12,6 +14,7 @@ import { useToast } from "@/lib/context/ToastContext";
 
 export default function ProfilePage() {
     const { showToast } = useToast();
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<"posts" | "saved" | "stats" | "settings">("posts");
     const [userProfile, setUserProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -78,6 +81,12 @@ export default function ProfilePage() {
             navigator.clipboard.writeText(window.location.href);
             showToast({ title: "Profile link copied to clipboard!", type: "success", rank: "primary" });
         }
+    };
+
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push("/login");
     };
 
     return (
@@ -193,9 +202,16 @@ export default function ProfilePage() {
                             </button>
                             <button
                                 onClick={handleShare}
-                                className="h-10 px-6 py-2 rounded-xl bg-white/[0.07] border border-white/[0.08] text-sm font-semibold text-zinc-300 hover:bg-white/[0.12] active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
+                                className="h-10 px-4 sm:px-6 py-2 rounded-xl bg-white/[0.07] border border-white/[0.08] text-sm font-semibold text-zinc-300 hover:bg-white/[0.12] active:scale-[0.97] transition-all duration-200 flex items-center gap-1.5"
                             >
-                                <Share2 size={15} /> Share
+                                <Share2 size={15} /> <span className="hidden sm:inline">Share</span>
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="h-10 px-4 py-2 rounded-xl bg-red-500/[0.1] border border-red-500/[0.2] text-sm font-semibold text-red-400 hover:bg-red-500/[0.2] active:scale-[0.97] transition-all duration-200 flex items-center justify-center sm:hidden"
+                                aria-label="Log Out"
+                            >
+                                <LogOut size={16} />
                             </button>
                         </div>
                     </div>

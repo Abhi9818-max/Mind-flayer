@@ -85,8 +85,8 @@ export function Navbar() {
                                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-black" />
                             </Link>
 
-                            {/* Profile Dropdown */}
-                            <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
+                            {/* Profile Dropdown (Hidden on Mobile) */}
+                            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-zinc-800">
                                 <Link
                                     href="/profile"
                                     className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"

@@ -8,21 +8,17 @@ import { useAdaptiveLayout } from "@/lib/hooks/useAdaptiveLayout";
 export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
     const pathname = usePathname();
 
-    // Define nav items
+    // Define nav items in standard exact order
     const navItems = [
         { href: "/feed", icon: <Home size={24} />, label: "Feed" },
-        { href: "/rooms", icon: <Radio size={24} />, label: "Rooms" },
         { href: "/explore", icon: <Globe size={24} />, label: "Explore" },
         { href: "/messages", icon: <MessageCircle size={24} />, label: "Messages" },
         { href: "/profile", icon: <User size={24} />, label: "Profile" },
     ];
 
-    // Get adaptive ordering based on user behavior
-    const orderedItems = useAdaptiveLayout(navItems, pathname);
-
     // Split into left and right sections (center will be the compose button)
-    const leftItems = orderedItems.slice(0, 2);
-    const rightItems = orderedItems.slice(2, 4);
+    const leftItems = navItems.slice(0, 2);
+    const rightItems = navItems.slice(2, 4);
 
     return (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 pb-safe">
