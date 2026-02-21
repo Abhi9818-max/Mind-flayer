@@ -2,39 +2,52 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Mic, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Mic, AlertTriangle, X, Send, EyeOff, Eye } from "lucide-react";
 import { createPost } from "@/lib/services/posts";
 import { getUserProfile, UserProfile } from "@/lib/services/user";
 import { AudioRecorder } from "@/components/compose/AudioRecorder";
 import { POST_CONFIG, PostType } from "@/types";
-
 import { useToast } from "@/lib/context/ToastContext";
 
 export function ComposeModal({ onClose, onSuccess }: { onClose: () => void, onSuccess?: () => void }) {
     const { showToast } = useToast();
+    const router = useRouter();
+
     const [content, setContent] = useState("");
     const [type, setType] = useState<PostType>("confession");
     const [isAnonymous, setIsAnonymous] = useState(true);
     const [isRecordingMode, setIsRecordingMode] = useState(false);
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Verification state
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
-    const router = useRouter();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
     useEffect(() => {
+        let mounted = true;
         getUserProfile().then(p => {
-            setProfile(p);
-            setIsLoadingProfile(false);
+            if (mounted) {
+                setProfile(p);
+                setIsLoadingProfile(false);
+            }
         });
+        return () => { mounted = false; };
     }, []);
 
     const isVerified = profile?.verification_status === 'approved';
+
+    // Dynamic header styling based on post type
+    const headerDetails: Record<PostType, { title: string, subtitle: string, color: string }> = {
+        confession: { title: "Whisper a Confession", subtitle: "Speak your truth into the void.", color: "from-purple-500 to-indigo-500" },
+        rumor: { title: "Spread a Rumor", subtitle: "Let the whispers fly across campus.", color: "from-amber-500 to-yellow-500" },
+        crush: { title: "Declare a Crush", subtitle: "Secretly admire from afar.", color: "from-pink-500 to-rose-500" },
+        rant: { title: "Unleash a Rant", subtitle: "Let the frustration flow.", color: "from-red-500 to-orange-500" },
+        question: { title: "Ask the Void", subtitle: "Seek answers from the collective.", color: "from-emerald-500 to-teal-500" },
+        voice: { title: "Record Voice Note", subtitle: "Let them hear your actual voice.", color: "from-red-600 to-rose-600" }
+    };
+
+    const currentHeader = isRecordingMode ? headerDetails.voice : (headerDetails[type] || headerDetails.confession);
 
     const handleSubmit = async () => {
         if (!content.trim() && !audioBlob) return;
@@ -49,168 +62,220 @@ export function ComposeModal({ onClose, onSuccess }: { onClose: () => void, onSu
                 audioBlob: isRecordingMode ? audioBlob : undefined
             });
 
-            // Reset and close
             setContent("");
             setAudioBlob(null);
             onClose();
 
-            // Refresh feed locally
             if (onSuccess) onSuccess();
-            router.refresh(); // Fallback for Server Components
+            router.refresh();
 
         } catch (error) {
             console.error("Failed to create post:", error);
-            // alert("Failed to post. Please try again.");
             showToast({
                 title: "Transmission Failed",
                 message: "Your secret could not be whispered to the void.",
                 type: "error",
                 rank: "secondary"
             });
-        } finally {
-            setIsSubmitting(false);
+            setIsSubmitting(false); // only toggle false if error, otherwise unmount happens
         }
     };
 
     if (isLoadingProfile) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                <div className="animate-spin text-red-500">⏳</div>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
+                    <span className="text-zinc-500 font-mono text-xs tracking-widest uppercase">Verifying Link</span>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 sm:p-0">
-            {/* Backdrop */}
+        <div className="fixed inset-0 z-[100] flex sm:items-center justify-center items-end p-0 sm:p-4">
+            {/* Backdrop with animated subtle glow */}
             <div
-                className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in"
+                className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity animate-in fade-in duration-500"
                 onClick={onClose}
-            />
+            >
+                {/* Dynamic radial glow reflecting the current post type */}
+                <div
+                    className={`absolute inset-0 opacity-20 transition-all duration-1000 bg-gradient-to-tr ${currentHeader.color} [mask-image:radial-gradient(circle_at_center,black_0%,transparent_70%)]`}
+                />
+            </div>
 
-            {/* Modal */}
-            <Card className="relative w-full max-w-lg p-0 overflow-hidden shadow-2xl shadow-purple-900/20 animate-fade-in-up border-white/10 !bg-[#0c0c0c] rounded-b-none rounded-t-3xl sm:rounded-2xl pb-safe">
+            {/* Modal Container */}
+            <div className="relative w-full max-w-2xl bg-[#0a0a0c]/90 sm:rounded-3xl rounded-t-3xl border sm:border-white/10 border-t-white/10 border-x-transparent border-b-transparent shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh] pb-safe animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-400 ease-out sm:mb-0">
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
-                    <h2 className="font-display text-xl font-bold text-white flex items-center gap-2">
-                        <span className="text-2xl">✨</span> Create Post
-                    </h2>
-                    <button onClick={onClose} className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors">
-                        ✕
+                {/* Header Area */}
+                <div className="flex items-start justify-between p-6 pb-2 relative z-10">
+                    <div>
+                        <h2 className={`text-2xl sm:text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r ${currentHeader.color} transition-all duration-500`}>
+                            {currentHeader.title}
+                        </h2>
+                        <p className="text-zinc-400 text-sm mt-1">{currentHeader.subtitle}</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-full transition-all duration-200 active:scale-95"
+                    >
+                        <X size={20} />
                     </button>
                 </div>
 
                 {!isVerified ? (
-                    <div className="p-8 text-center space-y-4">
-                        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <AlertTriangle className="text-yellow-500" size={32} />
+                    <div className="p-8 sm:p-12 text-center flex flex-col items-center flex-1">
+                        <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(234,179,8,0.2)]">
+                            <AlertTriangle className="text-yellow-500" size={36} />
                         </div>
-                        <h3 className="text-xl font-bold text-white">Verification Pending</h3>
-                        <p className="text-zinc-400">
-                            To ensure the quality of the Void, you must have a verified college ID to post.
-                            Your documents are currently under review by the Supreme Being.
+                        <h3 className="text-2xl font-bold text-white mb-3">Verification Pending</h3>
+                        <p className="text-zinc-400 max-w-sm mb-8 leading-relaxed">
+                            To ensure the quality of the Void, you must have a verified college ID to post. Your documents are currently under review by the Supreme Being.
                         </p>
-                        <Button onClick={onClose} variant="ghost" className="mt-4">
-                            Close
-                        </Button>
+                        <button
+                            onClick={onClose}
+                            className="px-8 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold transition-all active:scale-95 border border-white/10"
+                        >
+                            Return to Feed
+                        </button>
                     </div>
                 ) : (
-                    <>
-                        {/* Type Selector */}
-                        <div className="flex gap-2 overflow-x-auto px-6 py-4 scrollbar-none">
-                            {(Object.keys(POST_CONFIG) as PostType[]).map((t) => (
-                                <button
-                                    key={t}
-                                    onClick={() => { setType(t); setIsRecordingMode(false); }}
-                                    className={`
-                                        flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap text-xs font-semibold transition-all duration-200 border
-                                        ${type === t && !isRecordingMode
-                                            ? 'bg-accent-gradient text-white border-transparent shadow-lg shadow-purple-500/20'
-                                            : 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10'
-                                        }
-                                    `}
-                                >
-                                    <span>{POST_CONFIG[t].icon}</span>
-                                    <span>{POST_CONFIG[t].label}</span>
-                                </button>
-                            ))}
+                    <div className="flex flex-col flex-1 overflow-hidden relative z-10">
+                        {/* Scrollable Content Area */}
+                        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
 
-                            {/* Voice Note Button */}
+                            {/* Input Region */}
+                            <div className="min-h-[160px] sm:min-h-[200px] flex flex-col justify-center">
+                                {isRecordingMode ? (
+                                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center justify-center py-8">
+                                        <AudioRecorder onRecordingComplete={(blob) => setAudioBlob(blob)} />
+                                        <div className="w-full max-w-sm mt-8">
+                                            <input
+                                                value={content}
+                                                onChange={(e) => setContent(e.target.value)}
+                                                placeholder="Add an optional caption..."
+                                                className="w-full bg-transparent border-b border-white/10 focus:border-red-500/50 py-3 text-center text-white placeholder-zinc-600 focus:outline-none transition-colors text-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        placeholder={`Start typing...`}
+                                        className="w-full h-full min-h-[160px] sm:min-h-[200px] bg-transparent text-xl sm:text-2xl text-white placeholder-zinc-700/80 focus:outline-none resize-none leading-relaxed transition-all p-2 rounded-xl"
+                                        autoFocus
+                                    />
+                                )}
+                            </div>
+
+                            {/* Type Selector (Pills) */}
+                            <div className="mt-8">
+                                <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3 block px-2">Select Channel</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {(Object.keys(POST_CONFIG) as PostType[]).map((t) => {
+                                        const isSelected = type === t && !isRecordingMode;
+                                        return (
+                                            <button
+                                                key={t}
+                                                onClick={() => { setType(t); setIsRecordingMode(false); }}
+                                                className={`
+                                                    flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap text-sm font-semibold transition-all duration-300 border
+                                                    ${isSelected
+                                                        ? 'bg-white text-black border-transparent shadow-[0_0_15px_rgba(255,255,255,0.3)] scale-105'
+                                                        : 'bg-zinc-900/50 text-zinc-400 border-white/5 hover:bg-zinc-800 hover:text-white'
+                                                    }
+                                                `}
+                                            >
+                                                <span className={isSelected ? "text-black" : "opacity-70"}>{POST_CONFIG[t].icon}</span>
+                                                <span>{POST_CONFIG[t].label}</span>
+                                            </button>
+                                        );
+                                    })}
+
+                                    {/* Voice Note Tab */}
+                                    <button
+                                        onClick={() => setIsRecordingMode(true)}
+                                        className={`
+                                            flex items-center gap-2 px-4 py-2.5 rounded-xl whitespace-nowrap text-sm font-semibold transition-all duration-300 border
+                                            ${isRecordingMode
+                                                ? 'bg-red-600 text-white border-transparent shadow-[0_0_20px_rgba(220,38,38,0.4)] scale-105'
+                                                : 'bg-zinc-900/50 text-red-500/60 border-red-500/10 hover:bg-zinc-800 hover:text-red-400'
+                                            }
+                                        `}
+                                    >
+                                        <Mic size={16} />
+                                        <span>Voice Note</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sticky Footer / Controls */}
+                        <div className="w-full bg-[#0a0a0c] border-t border-white/5 p-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row gap-4 sm:items-center justify-between relative z-20">
+
+                            {/* Left: Anonymity Toggle */}
+                            <label className="flex items-center gap-3 cursor-pointer group w-fit select-none">
+                                <div className={`relative h-8 w-14 rounded-full transition-all duration-300 border border-white/10 ${isAnonymous ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-[0_0_15px_rgba(147,51,234,0.3)]' : 'bg-zinc-800'}`}>
+                                    <div className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-300 flex items-center justify-center ${isAnonymous ? 'translate-x-6' : 'translate-x-0'}`}>
+                                        {isAnonymous ? <EyeOff size={12} className="text-purple-600" /> : <Eye size={12} className="text-zinc-400" />}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className={`text-sm font-bold transition-colors ${isAnonymous ? 'text-white' : 'text-zinc-500'}`}>
+                                        Anonymous
+                                    </span>
+                                    <span className="text-[10px] text-zinc-600 leading-none">
+                                        {isAnonymous ? 'Identity masked' : 'Identity revealed'}
+                                    </span>
+                                </div>
+                            </label>
+
+                            {/* Right: Post Button */}
                             <button
-                                onClick={() => setIsRecordingMode(true)}
+                                onClick={handleSubmit}
+                                disabled={isRecordingMode ? !audioBlob : !content.trim() || isSubmitting}
                                 className={`
-                                    flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap text-xs font-semibold transition-all duration-200 border
-                                    ${isRecordingMode
-                                        ? 'bg-red-600 text-white border-transparent shadow-lg shadow-red-500/20'
-                                        : 'bg-white/5 text-zinc-400 border-white/5 hover:bg-white/10'
+                                    flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl font-bold text-sm transition-all duration-300
+                                    ${(isRecordingMode ? audioBlob : content.trim()) && !isSubmitting
+                                        ? `bg-white text-black hover:scale-105 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.3)]`
+                                        : 'bg-white/5 text-zinc-600 cursor-not-allowed border border-white/5'
                                     }
                                 `}
                             >
-                                <Mic size={14} />
-                                <span>Voice Note</span>
+                                {isSubmitting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                        <span>Transmitting...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Release</span>
+                                        <Send size={16} />
+                                    </>
+                                )}
                             </button>
                         </div>
-
-                        {/* Content */}
-                        <div className="px-6 pb-4">
-                            {isRecordingMode ? (
-                                <div className="animate-fade-in">
-                                    <AudioRecorder onRecordingComplete={(blob) => setAudioBlob(blob)} />
-                                    <div className="mt-4">
-                                        <label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Optional Caption</label>
-                                        <textarea
-                                            value={content}
-                                            onChange={(e) => setContent(e.target.value)}
-                                            placeholder="Add context to your voice note..."
-                                            rows={2}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500/50 transition-all resize-none"
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder={`Share your ${type}...`}
-                                    rows={5}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-base text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all resize-none"
-                                />
-                            )}
-                        </div>
-
-                        {/* Options */}
-                        <div className="px-6 pb-6">
-                            <label
-                                className="flex items-center gap-3 cursor-pointer group w-fit"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setIsAnonymous(!isAnonymous);
-                                }}
-                            >
-                                <div className={`relative h-6 w-11 rounded-full transition-all duration-300 ${isAnonymous ? 'bg-purple-600' : 'bg-zinc-700'}`}>
-                                    <div className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ${isAnonymous ? 'translate-x-5' : 'translate-x-0'}`} />
-                                </div>
-                                <span className="text-sm font-medium text-zinc-300 group-hover:text-white transition-colors">Post anonymously</span>
-                            </label>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex gap-3 px-6 py-4 border-t border-white/5 bg-zinc-900/50">
-                            <Button variant="ghost" onClick={onClose} className="flex-1">
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isRecordingMode ? !audioBlob : !content.trim() || isSubmitting}
-                                className="flex-1"
-                            >
-                                {isSubmitting ? "Posting..." : "Post"}
-                            </Button>
-                        </div>
-                    </>
+                    </div>
                 )}
-            </Card>
+            </div>
+
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background-color: rgba(255, 255, 255, 0.1);
+                    border-radius: 20px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background-color: rgba(255, 255, 255, 0.2);
+                }
+            `}</style>
         </div>
     );
 }
