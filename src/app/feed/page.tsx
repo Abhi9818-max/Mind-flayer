@@ -195,7 +195,7 @@ function FeedContent() {
                 </div>
 
                 {/* The Stream Feed */}
-                <div className="px-4 md:px-6 space-y-8 max-w-3xl mx-auto">
+                <div className="px-4 md:px-6 space-y-4 max-w-3xl mx-auto">
                     {isLoading ? (
                         <PostCardSkeletonList count={3} />
                     ) : filteredPosts.length === 0 ? (

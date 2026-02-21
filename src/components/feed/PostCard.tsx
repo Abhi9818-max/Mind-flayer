@@ -189,12 +189,12 @@ export function PostCard({
     return (
         <SpotlightCard
             className={`
-                p-5 sm:p-8 transition-all duration-500 ease-out animate-fade-in-up
-                scale-100 opacity-0 shadow-2xl shadow-black/40 translate-y-4 z-10 
-                hover:shadow-red-900/20 hover:-translate-y-1
-                active:scale-[0.99] active:duration-150
+                p-4 sm:p-5 transition-all duration-500 ease-out animate-fade-in-up
+                scale-100 opacity-0 shadow-xl shadow-black/30 translate-y-4 z-10 
+                hover:shadow-red-900/20 hover:-translate-y-0.5
+                active:scale-[0.995] active:duration-150
                 ${styles.border} group
-                border-l-4 relative
+                border-l-[3px] relative
             `}
             spotlightColor="rgba(255, 255, 255, 0.08)"
             style={{
@@ -248,16 +248,16 @@ export function PostCard({
             ) : null}
 
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 relative z-10">
+            <div className="flex items-center justify-between mb-3 relative z-10">
 
                 {/* Left: Identity */}
                 <button
                     onClick={handleIdentityClick}
-                    className="flex items-center gap-3 group/id cursor-pointer"
+                    className="flex items-center gap-2.5 group/id cursor-pointer"
                 >
                     {post.is_anonymous ? (
                         <>
-                            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700/50 group-hover/id:border-zinc-500 transition-colors shadow-sm overflow-hidden">
+                            <div className="w-7 h-7 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700/50 group-hover/id:border-zinc-500 transition-colors shadow-sm overflow-hidden">
                                 {post.author?.void_avatar ? (
                                     <img
                                         src={post.author.void_avatar}
@@ -279,7 +279,7 @@ export function PostCard({
                         </>
                     ) : (
                         <>
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center text-xs font-mono font-bold text-white shadow-md shadow-red-900/20 group-hover/id:scale-110 transition-transform overflow-hidden relative">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-md shadow-red-900/20 group-hover/id:scale-110 transition-transform overflow-hidden relative">
                                 {post.author?.avatar_url ? (
                                     <img
                                         src={post.author.avatar_url}
@@ -332,7 +332,7 @@ export function PostCard({
             </div>
 
             {/* Content w/ optional blur for Under Review */}
-            <div className={`mb-6 relative z-10 ${post.moderation_status === 'under_review' ? 'blur-sm select-none opacity-50 grayscale transition-all duration-300 hover:blur-none hover:opacity-100' : ''}`}>
+            <div className={`mb-3 relative z-10 ${post.moderation_status === 'under_review' ? 'blur-sm select-none opacity-50 grayscale transition-all duration-300 hover:blur-none hover:opacity-100' : ''}`}>
                 {post.moderation_status === 'under_review' && (
                     <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                         <span className="bg-black/80 px-3 py-1.5 rounded-full text-[10px] font-bold text-zinc-400 uppercase tracking-widest border border-white/10">
@@ -348,14 +348,14 @@ export function PostCard({
                 ) : null}
 
                 {post.content && (
-                    <p className="text-zinc-300 leading-relaxed font-medium text-[15px]">
+                    <p className="text-zinc-300 leading-relaxed font-medium text-[14px]">
                         {post.content}
                     </p>
                 )}
             </div>
 
             {/* Actions */}
-            <div className={`flex items-center justify-between pt-6 mt-2 border-t border-white/5 relative z-10 ${post.moderation_status === 'under_review' ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className={`flex items-center justify-between pt-3 mt-1 border-t border-white/5 relative z-10 ${post.moderation_status === 'under_review' ? 'opacity-50 pointer-events-none' : ''}`}>
 
                 {/* Social Group */}
                 <div className="flex items-center gap-4">

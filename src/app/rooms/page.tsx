@@ -44,7 +44,7 @@ export default function RoomsPage() {
             </Suspense>
             <MobileNav />
 
-            <main className="relative z-10 pt-8 lg:pt-24 pb-24 px-4 max-w-4xl mx-auto">
+            <main className="relative z-10 pt-[calc(env(safe-area-inset-top,20px)+72px)] lg:pt-24 pb-24 px-4 max-w-4xl mx-auto">
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <div>
