@@ -252,7 +252,11 @@ export interface User {
   id: string;
   email: string;
   username: string;
-  display_name: string | null;
+  display_name: string | null; // Real Name (Visible when non-anonymous)
+  void_name: string | null;    // Anonymous Alias (Visible when anonymous)
+  bio: string | null;          // User Biography
+  avatar_url?: string;         // Real Avatar
+  void_avatar?: string;        // Anonymous Avatar identifier
   territory_id: string;
   is_verified: boolean;
   is_anonymous_default: boolean;

@@ -121,7 +121,7 @@ export function AudioPlayer({ src }: AudioPlayerProps) {
                 </div>
 
                 <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-1">
-                    <span>{formatTime(audioRef.current?.currentTime || 0)}</span>
+                    <span>{formatTime((progress / 100) * duration || 0)}</span>
                     <span className="text-red-500/80 tracking-wider">VOICE_ENCRYPTED</span>
                     <span>{formatTime(duration)}</span>
                 </div>

@@ -3,16 +3,38 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Home, Globe, Bell, User, Plus, MessageCircle, Radio } from "lucide-react";
+import { useAdaptiveLayout } from "@/lib/hooks/useAdaptiveLayout";
 
 export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
     const pathname = usePathname();
 
+    // Define nav items
+    const navItems = [
+        { href: "/feed", icon: <Home size={24} />, label: "Feed" },
+        { href: "/rooms", icon: <Radio size={24} />, label: "Rooms" },
+        { href: "/explore", icon: <Globe size={24} />, label: "Explore" },
+        { href: "/messages", icon: <MessageCircle size={24} />, label: "Messages" },
+        { href: "/profile", icon: <User size={24} />, label: "Profile" },
+    ];
+
+    // Get adaptive ordering based on user behavior
+    const orderedItems = useAdaptiveLayout(navItems, pathname);
+
+    // Split into left and right sections (center will be the compose button)
+    const leftItems = orderedItems.slice(0, 2);
+    const rightItems = orderedItems.slice(2, 4);
+
     return (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/90 backdrop-blur-xl border-t border-white/10 pb-safe">
             <div className="flex justify-around items-center h-16">
-                <MobileNavLink href="/feed" icon={<Home size={24} />} active={pathname === "/feed"} />
-                <MobileNavLink href="/rooms" icon={<Radio size={24} />} active={pathname === "/rooms"} />
-                <MobileNavLink href="/explore" icon={<Globe size={24} />} active={pathname === "/explore"} />
+                {leftItems.map((item) => (
+                    <MobileNavLink
+                        key={item.href}
+                        href={item.href}
+                        icon={item.icon}
+                        active={pathname === item.href || (item.href === "/messages" && pathname.startsWith("/messages/"))}
+                    />
+                ))}
 
                 {/* Center Action Button */}
                 <div className="relative -top-5">
@@ -24,8 +46,14 @@ export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
                     </button>
                 </div>
 
-                <MobileNavLink href="/messages" icon={<MessageCircle size={24} />} badge="3" active={pathname === "/messages" || pathname.startsWith("/messages/")} />
-                <MobileNavLink href="/profile" icon={<User size={24} />} active={pathname === "/profile"} />
+                {rightItems.map((item) => (
+                    <MobileNavLink
+                        key={item.href}
+                        href={item.href}
+                        icon={item.icon}
+                        active={pathname === item.href || (item.href === "/messages" && pathname.startsWith("/messages/"))}
+                    />
+                ))}
             </div>
         </nav>
     );

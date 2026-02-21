@@ -17,36 +17,28 @@ export default function LoginPage() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Login button clicked!");
-        console.log("Email:", email);
-
         setError(null);
         setLoading(true);
 
         try {
-            console.log("Attempting login...");
-            // Using mock auth for now - replace with Supabase later
-            const { mockAuth } = await import('@/lib/auth/mockAuth');
-            console.log("Mock auth loaded");
+            const supabase = createClient();
 
-            const { data, error } = await mockAuth.signIn(email, password);
-            console.log("Login response:", { data, error });
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-            if (error) {
-                console.error("Login error:", error);
-                setError(error.message);
-            } else if (data) {
-                console.log("Login successful! Redirecting...");
-                router.push("/feed");
+            if (signInError) {
+                console.error("Login error:", signInError);
+                setError(signInError.message);
             } else {
-                console.error("No data or error returned");
-                setError("Login failed - no response");
+                router.push("/feed");
+                router.refresh();
             }
         } catch (err) {
             console.error("Unexpected error during login:", err);
             setError(err instanceof Error ? err.message : "An unexpected error occurred");
         } finally {
-            console.log("Login process finished");
             setLoading(false);
         }
     };

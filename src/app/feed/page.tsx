@@ -13,89 +13,28 @@ import { Navbar } from "@/components/layout/Navbar";
 // import { Sidebar } from "@/components/layout/Sidebar"; // Removed
 import { MobileNav } from "@/components/layout/MobileNav";
 import { createChat } from "@/lib/services/chat";
+import { getPosts } from "@/lib/services/posts";
+import { getUserInteractions } from "@/lib/services/interactions";
 import { FilterTab } from "@/components/feed/FilterTab";
 import { LiquidBackground } from "@/components/ui/LiquidBackground";
 import { ComposeModal } from "@/components/compose/ComposeModal";
 import { EmptyFeed } from "@/components/ui/EmptyState";
+import { VerificationBanner } from "@/components/layout/VerificationBanner";
+import { useToast } from "@/lib/context/ToastContext";
 
 const NCR_DOMINION_ID = "660e8400-e29b-41d4-a716-446655440000";
-
-const MOCK_POSTS = [
-    {
-        id: "1",
-        type: "confession" as PostType,
-        content: "I've been secretly studying in the library every night because I told everyone I don't study at all. The pressure of maintaining the 'effortlessly smart' image is killing me. 😭",
-        is_anonymous: true,
-        like_count: 47,
-        comment_count: 12,
-        created_at: "2h ago",
-        author_id: "mock-user-1",
-        dominion_id: NCR_DOMINION_ID,
-        moderation_status: "active" as const,
-        is_auto_zoned: true
-    },
-    {
-        id: "2",
-        type: "crush" as PostType,
-        content: "To the person in the front row of the Data Structures class with the blue laptop - your smile literally makes my day. I'm too scared to say hi 🥹",
-        is_anonymous: true,
-        like_count: 89,
-        comment_count: 23,
-        created_at: "4h ago",
-        author_id: "mock-user-2",
-        dominion_id: NCR_DOMINION_ID,
-        moderation_status: "active" as const,
-        is_auto_zoned: true
-    },
-    {
-        id: "3",
-        type: "rumor" as PostType,
-        content: "Heard the canteen is finally getting renovated next semester. New menu items coming apparently! 🍕",
-        is_anonymous: true,
-        like_count: 156,
-        comment_count: 45,
-        created_at: "6h ago",
-        author_id: "mock-user-3",
-        dominion_id: NCR_DOMINION_ID,
-        moderation_status: "active" as const, // Normal
-        is_auto_zoned: true
-    },
-    {
-        id: "4",
-        type: "rant" as PostType,
-        content: "WHY does the WiFi always die exactly when I need to submit assignments?! It's like the router knows. 💀",
-        is_anonymous: false,
-        like_count: 234,
-        comment_count: 67,
-        created_at: "8h ago",
-        author_id: "mock-user-4",
-        dominion_id: NCR_DOMINION_ID,
-        moderation_status: "flagged" as const, // TEST: Flagged state
-        is_auto_zoned: true
-    },
-    {
-        id: "5",
-        type: "question" as PostType,
-        content: "Anyone know any good spots near campus for late night study sessions? The library closes too early.",
-        is_anonymous: true,
-        like_count: 34,
-        comment_count: 8,
-        created_at: "10h ago",
-        author_id: "mock-user-5",
-        dominion_id: NCR_DOMINION_ID,
-        moderation_status: "under_review" as const, // TEST: Under Review state
-        is_auto_zoned: true
-    }
-];
 
 function FeedContent() {
     const searchParams = useSearchParams();
     const activeFilter = searchParams.get("type") as PostType | "all" || "all";
     const router = useRouter();
     const { isFilterOpen, closeFilter } = useUI();
+    const { showToast } = useToast();
 
     const [showComposer, setShowComposer] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [posts, setPosts] = useState<any[]>([]);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const handleFilterClick = (type: PostType | "all") => {
         if (type === "all") {
@@ -110,18 +49,36 @@ function FeedContent() {
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [activeChatRecipient, setActiveChatRecipient] = useState<string | null>(null);
-    // const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
 
-    const filteredPosts = activeFilter === "all"
-        ? MOCK_POSTS
-        : MOCK_POSTS.filter(p => p.type === activeFilter);
-
-    // Simulate loading
+    // Fetch Posts from Supabase
     useEffect(() => {
-        setIsLoading(true);
-        const timer = setTimeout(() => setIsLoading(false), 800);
-        return () => clearTimeout(timer);
-    }, [activeFilter]);
+        const fetchPosts = async () => {
+            setIsLoading(true);
+            try {
+                const fetchedPosts = await getPosts(activeFilter);
+
+                // Fetch interaction states (likes/saves)
+                const postIds = fetchedPosts.map((p: any) => p.id);
+                const interactionsMap = await getUserInteractions(postIds);
+
+                const postsWithInteractions = fetchedPosts.map((post: any) => ({
+                    ...post,
+                    hasLiked: interactionsMap[post.id]?.hasLiked || false,
+                    hasSaved: interactionsMap[post.id]?.hasSaved || false
+                }));
+
+                setPosts(postsWithInteractions);
+            } catch (error) {
+                console.error("Error loading feed:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchPosts();
+    }, [activeFilter, refreshTrigger]);
+
+    const filteredPosts = posts;
 
     // Scroll Focus Logic Removed - Standard Feed Layout
     /* 
@@ -138,7 +95,12 @@ function FeedContent() {
             setActiveChatRecipient(isAnonymous ? "Anonymous User" : "User");
         } catch (error) {
             console.error("Failed to start chat:", error);
-            alert("Could not start chat. Make sure you are logged in.");
+            showToast({
+                title: "Connection Failed",
+                message: "Could not establish telepathic link. Ensure you are logged in.",
+                type: "error",
+                rank: "primary"
+            });
         }
     };
 
@@ -149,6 +111,7 @@ function FeedContent() {
             {/* Navigation */}
             <Navbar />
             <MobileNav onComposeClick={() => setShowComposer(true)} />
+            <VerificationBanner />
 
             {/* Main Content Wrapper */}
             <main className="relative z-10 pt-16 pb-24 lg:pb-10 transition-all duration-300">
@@ -239,6 +202,7 @@ function FeedContent() {
                                         <CommentSection
                                             postId={post.id}
                                             onClose={() => setActiveCommentPostId(null)}
+                                            initialCount={post.comment_count || 0}
                                         />
                                     </div>
                                 )}
@@ -260,7 +224,10 @@ function FeedContent() {
 
             {/* Modals & Overlays */}
             {showComposer && (
-                <ComposeModal onClose={() => setShowComposer(false)} />
+                <ComposeModal
+                    onClose={() => setShowComposer(false)}
+                    onSuccess={() => setRefreshTrigger(prev => prev + 1)}
+                />
             )}
 
             {/* {activeCommentPostId && (

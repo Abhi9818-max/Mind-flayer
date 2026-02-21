@@ -1,0 +1,12 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.mindflayer.app',
+  appName: 'Mind-Flayer',
+  webDir: 'out',
+  server: {
+    androidScheme: 'https'
+  }
+};
+
+export default config;

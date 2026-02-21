@@ -19,10 +19,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                     <input
                         ref={ref}
                         className={`
-              w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
+              w-full glass-panel rounded-xl px-4 py-3
               text-zinc-200 placeholder:text-zinc-600 outline-none
               transition-all duration-300
-              focus:bg-white/10 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50
+              focus:bg-white/10 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/50 focus:shadow-[0_0_20px_rgba(229,9,20,0.3)]
               disabled:opacity-50 disabled:cursor-not-allowed
               ${error ? "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20" : ""}
               ${className}

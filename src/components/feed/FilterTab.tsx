@@ -6,6 +6,7 @@ const typeStyles: Record<PostType, string> = {
     crush: 'bg-rose-600 text-white shadow-rose-600/40',
     rant: 'bg-orange-600 text-white shadow-orange-600/40',
     question: 'bg-zinc-600 text-white shadow-zinc-600/40',
+    voice: 'bg-violet-600 text-white shadow-violet-600/40',
 };
 
 export function FilterTab({
@@ -29,9 +30,9 @@ export function FilterTab({
         <button
             onClick={onClick}
             className={`
-                flex items-center gap-1.5 px-4 py-1.5 rounded-full whitespace-nowrap text-xs font-semibold transition-all duration-300 border
+                flex items-center gap-1.5 px-4 py-1.5 rounded-full whitespace-nowrap text-xs font-semibold transition-colors duration-200 border touch-manipulation
                 ${active
-                    ? `${activeStyle} shadow-md border-transparent scale-105`
+                    ? `${activeStyle} shadow-md border-transparent`
                     : 'bg-transparent border-white/10 text-zinc-500 hover:border-white/20 hover:text-zinc-300'
                 }
             `}

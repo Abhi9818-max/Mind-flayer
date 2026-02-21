@@ -1,6 +1,18 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { UIProvider } from "@/lib/context/UIContext";
+import { ToastProvider } from "@/lib/context/ToastContext";
+import { ToastContainer } from "@/components/ui/ToastContainer";
+import { AccountStatusBanner } from "@/components/layout/AccountStatusBanner";
+import { AdaptiveUIDebug } from "@/components/debug/AdaptiveUIDebug";
+
+export const viewport = {
+  themeColor: "#ef4444",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: "Mind-Flayer | Your Campus, Unfiltered",
@@ -8,7 +20,6 @@ export const metadata: Metadata = {
   keywords: ["anonymous", "college", "social", "confessions", "rumors", "crush", "ncr", "delhi"],
   authors: [{ name: "Mind-Flayer" }],
   manifest: "/manifest.json",
-  themeColor: "#ef4444",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -30,7 +41,12 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning>
         <UIProvider>
-          {children}
+          <ToastProvider>
+            <AccountStatusBanner />
+            {children}
+            <ToastContainer />
+            <AdaptiveUIDebug />
+          </ToastProvider>
         </UIProvider>
         <script
           dangerouslySetInnerHTML={{
@@ -46,6 +62,22 @@ export default function RootLayout({
                     });
                 });
               }
+
+              // Suppress known Next.js Turbopack AbortError overlay
+              const originalError = console.error;
+              console.error = function(...args) {
+                if (args[0] && typeof args[0] === 'string' && args[0].includes('signal is aborted without reason')) {
+                  return;
+                }
+                if (args[0] && args[0].name === 'AbortError') return;
+                originalError.apply(console, args);
+              };
+
+              window.addEventListener('unhandledrejection', event => {
+                if (event.reason && (event.reason.name === 'AbortError' || event.reason.message.includes('signal is aborted'))) {
+                  event.preventDefault();
+                }
+              });
             `,
           }}
         />

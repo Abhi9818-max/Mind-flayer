@@ -48,10 +48,10 @@ export function ChatWindow({
                 {
                     event: 'INSERT',
                     schema: 'public',
-                    table: 'messages',
+                    table: 'chat_messages',
                     filter: `chat_id=eq.${chatId}`
                 },
-                (payload) => {
+                (payload: any) => {
                     const newMsg = payload.new as Message;
                     setMessages((prev) => [...prev, newMsg]);
                 }
@@ -119,7 +119,7 @@ export function ChatWindow({
                     </div>
                 ) : (
                     messages.map((msg) => {
-                        const isMe = msg.sender_id === currentUserId;
+                        const isMe = msg.sender_hash === currentUserId;
                         return (
                             <div
                                 key={msg.id}

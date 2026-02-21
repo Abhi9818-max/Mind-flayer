@@ -29,11 +29,11 @@ export function Button({
     };
 
     const variants = {
-        primary: "bg-accent-gradient text-white shadow-lg shadow-red-600/20 hover:shadow-red-600/40 hover:-translate-y-0.5 border border-white/10",
-        secondary: "bg-zinc-800 text-white border border-white/10 hover:bg-zinc-700 hover:border-white/20 hover:-translate-y-0.5 shadow-lg shadow-black/20",
+        primary: "bg-white text-black hover:bg-zinc-200 border border-transparent shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)]",
+        secondary: "bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700",
         ghost: "bg-transparent text-zinc-400 hover:text-white hover:bg-white/5",
-        danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 shadow-lg shadow-red-500/10",
-        glass: "bg-white/5 backdrop-blur-md text-white border border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-red-600/10"
+        danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20",
+        glass: "glass-panel text-white hover:bg-white/10"
     };
 
     const combinedClassName = `${baseStyles} ${sizes[size]} ${variants[variant]} ${className}`;
@@ -46,12 +46,15 @@ export function Button({
 
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                 </div>
             )}
 
+            {/* Shimmer Effect */}
             {variant === 'primary' && (
-                <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-[0%] transition-transform duration-300 ease-out z-0" />
+                <div className="absolute inset-0 z-0 overflow-hidden rounded-xl">
+                    <div className="absolute top-0 left-0 h-full w-[200%] animate-shimmer bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full" />
+                </div>
             )}
         </>
     );

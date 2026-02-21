@@ -6,9 +6,9 @@ import { Users } from "lucide-react";
 interface Room {
     id: string;
     name: string;
-    description: string;
-    emoji: string;
-    category: string;
+    description: string | null;
+    emoji: string | null;
+    category: string | null;
     activeUsers: number;
 }
 
@@ -26,17 +26,19 @@ export function RoomCard({ room, delay }: RoomCardProps) {
             >
                 <div className="flex items-start justify-between mb-3">
                     <div className="text-4xl group-hover:scale-110 transition-transform">
-                        {room.emoji}
+                        {room.emoji || "💬"}
                     </div>
-                    <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
-                        {room.category}
-                    </div>
+                    {room.category && (
+                        <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium">
+                            {room.category}
+                        </div>
+                    )}
                 </div>
 
                 <h3 className="text-xl font-bold mb-1 group-hover:text-red-400 transition-colors">
                     {room.name}
                 </h3>
-                <p className="text-sm text-zinc-400 mb-4">{room.description}</p>
+                <p className="text-sm text-zinc-400 mb-4">{room.description || "No description"}</p>
 
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1.5 text-sm text-zinc-500">

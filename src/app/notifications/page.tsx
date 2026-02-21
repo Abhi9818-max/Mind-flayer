@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { LiquidBackground } from "@/components/ui/LiquidBackground";
@@ -32,7 +32,7 @@ export default function NotificationsPage() {
 
     const handleMarkAllRead = async () => {
         try {
-            haptic.light();
+            haptic.success();
             await markAllAsRead();
             setNotifications(notifications.map(n => ({ ...n, is_read: true })));
         } catch (error) {
@@ -41,7 +41,14 @@ export default function NotificationsPage() {
     };
 
     const handleNotificationClick = async (n: Notification) => {
-        haptic.light();
+        // Use different haptics based on notification type
+        if (n.type === 'mention') {
+            haptic.shout();
+        } else if (n.type === 'system') {
+            haptic.urgent();
+        } else {
+            haptic.light();
+        }
         if (!n.is_read) {
             try {
                 await markAsRead(n.id);
@@ -67,7 +74,9 @@ export default function NotificationsPage() {
     return (
         <div className="min-h-screen text-white relative selection:bg-red-600/30">
             <LiquidBackground />
-            <Navbar />
+            <Suspense fallback={<div className="h-16" />}>
+                <Navbar />
+            </Suspense>
             <MobileNav />
 
             <main className="relative z-10 pt-20 lg:pt-24 pb-24 px-4 max-w-2xl mx-auto space-y-6">

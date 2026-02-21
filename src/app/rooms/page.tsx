@@ -1,22 +1,41 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { LiquidBackground } from "@/components/ui/LiquidBackground";
 import { RoomCard } from "@/components/rooms/RoomCard";
 import { Users, Plus } from "lucide-react";
-
-const MOCK_ROOMS = [
-    { id: "1", name: "The Void", description: "General anonymous chat", emoji: "🌀", category: "General", activeUsers: 42 },
-    { id: "2", name: "Study Hall", description: "Focused study sessions", emoji: "📚", category: "Study", activeUsers: 28 },
-    { id: "3", name: "Confession Box", description: "Share your secrets", emoji: "🤫", category: "Confessions", activeUsers: 67 },
-    { id: "4", name: "Meme Factory", description: "Share and laugh", emoji: "😂", category: "Memes", activeUsers: 91 },
-    { id: "5", name: "Late Night Thoughts", description: "3 AM conversations", emoji: "🌙", category: "General", activeUsers: 15 },
-    { id: "6", name: "Dating Advice", description: "Love and relationships", emoji: "💕", category: "Advice", activeUsers: 34 },
-];
+import { getRoomsWithStats, RoomWithStats } from "@/lib/services/rooms";
 
 export default function RoomsPage() {
+    const [rooms, setRooms] = useState<RoomWithStats[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchRooms();
+
+        // Refresh active user counts every 30 seconds
+        const interval = setInterval(fetchRooms, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchRooms = async () => {
+        try {
+            const data = await getRoomsWithStats();
+            setRooms(data);
+        } catch (error) {
+            console.error("Failed to fetch rooms:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const totalUsers = rooms.reduce((sum, room) => sum + room.activeUsers, 0);
+    const trendingRooms = rooms
+        .sort((a, b) => b.activeUsers - a.activeUsers)
+        .slice(0, 4);
+
     return (
         <div className="min-h-screen text-white relative selection:bg-red-600/30">
             <LiquidBackground />
@@ -41,29 +60,43 @@ export default function RoomsPage() {
 
                     <div className="flex items-center gap-2 text-sm text-zinc-400">
                         <Users size={16} />
-                        <span>{MOCK_ROOMS.reduce((sum, room) => sum + room.activeUsers, 0)} people chatting now</span>
+                        <span>
+                            {loading ? "..." : `${totalUsers} people chatting now`}
+                        </span>
                     </div>
                 </div>
 
-                {/* Featured Rooms */}
-                <div className="mb-8">
-                    <h2 className="text-xl fontbold mb-4">🔥 Trending Rooms</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {MOCK_ROOMS.slice(0, 4).map((room, i) => (
-                            <RoomCard key={room.id} room={room} delay={i * 100} />
+                {loading ? (
+                    <div className="space-y-4">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-32 bg-white/5 rounded-xl animate-pulse" />
                         ))}
                     </div>
-                </div>
+                ) : (
+                    <>
+                        {/* Trending Rooms */}
+                        {trendingRooms.length > 0 && (
+                            <div className="mb-8">
+                                <h2 className="text-xl font-bold mb-4">🔥 Trending Rooms</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {trendingRooms.map((room, i) => (
+                                        <RoomCard key={room.id} room={room} delay={i * 100} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                {/* All Rooms */}
-                <div>
-                    <h2 className="text-xl font-bold mb-4">All Rooms</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {MOCK_ROOMS.map((room, i) => (
-                            <RoomCard key={room.id} room={room} delay={i * 100} />
-                        ))}
-                    </div>
-                </div>
+                        {/* All Rooms */}
+                        <div>
+                            <h2 className="text-xl font-bold mb-4">All Rooms</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {rooms.map((room, i) => (
+                                    <RoomCard key={room.id} room={room} delay={i * 100} />
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
             </main>
         </div>
     );

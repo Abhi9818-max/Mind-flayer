@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Trash2, Play, Pause } from "lucide-react";
 
+import { useToast } from "@/lib/context/ToastContext";
+
 interface AudioRecorderProps {
     onRecordingComplete: (blob: Blob) => void;
 }
 
 export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
+    const { showToast } = useToast();
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
@@ -86,7 +89,12 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
 
         } catch (err) {
             console.error("Error accessing microphone:", err);
-            alert("Could not access microphone. Please allow permissions.");
+            showToast({
+                title: "Hardware Conflict",
+                message: "Microphone access denied by neural interface.",
+                type: "error",
+                rank: "secondary"
+            });
         }
     };
 

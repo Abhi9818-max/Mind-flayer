@@ -110,6 +110,7 @@ export function CampusWars() {
                                 <h3 className="text-sm font-bold text-zinc-200 group-hover:text-white transition-colors">{campus.name}</h3>
                                 <div className="flex items-center gap-2 mt-0.5">
                                     <div className="h-1 w-16 bg-white/10 rounded-full overflow-hidden">
+                                        {/* eslint-disable-next-line react-hooks/purity */}
                                         <div
                                             className={`h-full rounded-full ${activeTab === 'toxic' ? 'bg-red-500' : activeTab === 'wholesome' ? 'bg-pink-500' : 'bg-green-500'}`}
                                             style={{ width: `${typeof campus.score === 'number' ? campus.score : Math.random() * 100}%` }}

@@ -2,51 +2,86 @@ import { createClient } from "@/lib/supabase/client";
 
 export interface Chat {
     id: string;
-    post_id: string;
-    initiator_id: string;
-    recipient_id: string;
-    status: 'pending' | 'active' | 'rejected' | 'expired';
+    post_id?: string;
+    initiator_hash: string;
+    responder_hash: string;
+    is_revealed: boolean;
+    expires_at: string;
     created_at: string;
 }
 
 export interface Message {
     id: string;
     chat_id: string;
-    sender_id: string;
+    sender_hash: string;
     content: string;
-    is_read: boolean;
     created_at: string;
 }
 
-export async function createChat(postId: string, recipientId: string) {
+export async function createChat(postId: string, recipientHash: string) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("Not authenticated");
+
+    // The user_hash logic should ideally match how we generated it in posts.ts
+    // For now, we use the user.id as the hash for logged-in users initiating chats
+    const initiatorHash = user.id;
 
     // Check if chat already exists
     const { data: existingChat } = await supabase
         .from('chats')
         .select('*')
         .eq('post_id', postId)
-        .eq('initiator_id', user.id)
-        .eq('recipient_id', recipientId)
+        .eq('initiator_hash', initiatorHash)
+        .eq('responder_hash', recipientHash)
         .single();
 
     if (existingChat) return existingChat;
+
+    // Set expiration to 24 hours from now
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
     const { data, error } = await supabase
         .from('chats')
         .insert({
             post_id: postId,
-            initiator_id: user.id,
-            recipient_id: recipientId,
-            status: 'active' // For MVP, auto-accept
+            initiator_hash: initiatorHash,
+            responder_hash: recipientHash,
+            is_revealed: false,
+            expires_at: expiresAt.toISOString()
         })
         .select()
         .single();
 
     if (error) throw error;
+    return data;
+}
+
+export async function getConversations() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Not authenticated");
+
+    const userHash = user.id;
+
+    // Fetch chats where user is either initiator or responder
+    const { data, error } = await supabase
+        .from('chats')
+        .select(`
+            *,
+            chat_messages:chat_messages(content, created_at, sender_hash)
+        `)
+        .or(`initiator_hash.eq.${userHash},responder_hash.eq.${userHash}`)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching conversations:", error);
+        return [];
+    }
+
     return data;
 }
 
@@ -57,10 +92,10 @@ export async function sendMessage(chatId: string, content: string) {
     if (!user) throw new Error("Not authenticated");
 
     const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .insert({
             chat_id: chatId,
-            sender_id: user.id,
+            sender_hash: user.id,
             content
         })
         .select()
@@ -74,7 +109,7 @@ export async function getChatMessages(chatId: string) {
     const supabase = createClient();
 
     const { data, error } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .select('*')
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });

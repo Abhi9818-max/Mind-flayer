@@ -1,0 +1,13 @@
+﻿src/app/admin/page.tsx(35,46): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/admin/page.tsx(36,47): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/admin/page.tsx(37,47): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/admin/page.tsx(39,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/admin/page.tsx(40,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/app/rooms/[id]/page.tsx(53,49): error TS7031: Binding element 'user' implicitly has an 'any' type.
+src/app/rooms/[id]/page.tsx(110,24): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/app/rooms/[id]/page.tsx(135,25): error TS7006: Parameter 'status' implicitly has an 'any' type.
+src/components/chat/ChatWindow.tsx(54,18): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/components/layout/Navbar.tsx(24,49): error TS7031: Binding element 'user' implicitly has an 'any' type.
+src/components/layout/Navbar.tsx(36,77): error TS7006: Parameter '_event' implicitly has an 'any' type.
+src/components/layout/Navbar.tsx(36,85): error TS7006: Parameter 'session' implicitly has an 'any' type.
+src/lib/services/rooms.ts(57,42): error TS7006: Parameter 'msg' implicitly has an 'any' type.

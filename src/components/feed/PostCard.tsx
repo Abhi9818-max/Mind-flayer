@@ -18,11 +18,19 @@ interface Post {
     like_count: number;
     comment_count: number;
     created_at: string;
-    author_id?: string;
-    moderation_status?: 'active' | 'under_review' | 'flagged' | 'quarantined'; // Optional until backend sends it
+    author?: {
+        display_name?: string;
+        void_name?: string;
+        avatar_url?: string;
+        username?: string;
+    };
+    moderation_status?: 'active' | 'under_review' | 'flagged' | 'quarantined';
+    hasLiked?: boolean;
+    hasSaved?: boolean;
 }
 
 const typeStyles: Record<PostType | 'voice', { badge: string; border: string }> = {
+    // ... (unchanged)
     confession: { badge: 'bg-red-600/10 text-red-500 border-red-600/20', border: 'group-hover:border-red-600/30' },
     rumor: { badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20', border: 'group-hover:border-amber-500/30' },
     crush: { badge: 'bg-rose-500/10 text-rose-500 border-rose-500/20', border: 'group-hover:border-rose-500/30' },
@@ -30,6 +38,9 @@ const typeStyles: Record<PostType | 'voice', { badge: string; border: string }> 
     question: { badge: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20', border: 'group-hover:border-zinc-500/30' },
     voice: { badge: 'bg-purple-600/10 text-purple-400 border-purple-500/20', border: 'group-hover:border-purple-500/30' },
 };
+
+import { useToast } from "@/lib/context/ToastContext";
+import { toggleLike, toggleSave } from "@/lib/services/interactions";
 
 export function PostCard({
     post,
@@ -44,11 +55,82 @@ export function PostCard({
     onChatClick?: () => void;
     isFocused?: boolean;
 }) {
-    const [liked, setLiked] = useState(false);
+    const { showToast } = useToast();
+
+    // Interaction States
+    const [liked, setLiked] = useState(post.hasLiked || false);
+    const [likeCount, setLikeCount] = useState(post.like_count || 0);
+    const [saved, setSaved] = useState(post.hasSaved || false);
+    const [isLiking, setIsLiking] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
     // Fallback for new types
     const config = POST_CONFIG[post.type as PostType] || { icon: '🎙️', label: 'Voice Note' };
     const styles = typeStyles[post.type] || typeStyles['confession'];
     const typeColor = getPostTypeColor(post.type);
+
+    const handleIdentityClick = () => {
+        if (post.is_anonymous) {
+            showToast({
+                title: "Identity Encrypted",
+                message: "This user is exploring the void anonymously.",
+                type: "info",
+                rank: "secondary"
+            });
+        } else {
+            // Navigate to profile (Mock action)
+            console.log("Navigate to profile:", post.author?.username);
+        }
+    };
+
+    const handleLikeClick = async () => {
+        if (isLiking) return;
+
+        // Optimistic UI update
+        haptic.like();
+        const prevLiked = liked;
+        const prevCount = likeCount;
+
+        setLiked(!prevLiked);
+        setLikeCount(prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1);
+        setIsLiking(true);
+
+        try {
+            const res = await toggleLike(post.id, prevCount, prevLiked);
+            // Sync with actual server response if needed
+            setLiked(res.isLiked);
+            setLikeCount(res.likeCount);
+        } catch (error) {
+            // Revert on failure
+            setLiked(prevLiked);
+            setLikeCount(prevCount);
+            showToast({ title: "Verification Failed", message: "Action blocked.", type: "error", rank: "secondary" });
+        } finally {
+            setIsLiking(false);
+        }
+    };
+
+    const handleSaveClick = async () => {
+        if (isSaving) return;
+
+        haptic.light();
+        const prevSaved = saved;
+        setSaved(!prevSaved);
+        setIsSaving(true);
+
+        try {
+            const result = await toggleSave(post.id, prevSaved);
+            setSaved(result);
+            if (result) {
+                showToast({ title: "Saved", message: "Post saved to your collection.", type: "success", rank: "secondary" });
+            }
+        } catch (error) {
+            setSaved(prevSaved);
+            showToast({ title: "Error", message: "Could not save post.", type: "error", rank: "secondary" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <SpotlightCard
@@ -87,39 +169,74 @@ export function PostCard({
 
             {/* Header */}
             <div className="flex items-center justify-between mb-4 relative z-10">
+
+                {/* Left: Identity */}
+
+                <button
+                    onClick={handleIdentityClick}
+                    className="flex items-center gap-3 group/id cursor-pointer"
+                >
+                    {post.is_anonymous ? (
+                        <>
+                            <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700/50 group-hover/id:border-zinc-500 transition-colors shadow-sm">
+                                <span className="text-sm">🌑</span>
+                            </div>
+                            <div className="text-left">
+                                <span className="block text-sm font-bold text-zinc-400 group-hover/id:text-zinc-200 transition-colors tracking-wide">
+                                    {post.author?.void_name || "Anonymous"}
+                                </span>
+                                <span className="block text-[10px] text-zinc-600 font-mono uppercase tracking-wider">
+                                    Void Identity
+                                </span>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center text-xs font-mono font-bold text-white shadow-md shadow-red-900/20 group-hover/id:scale-110 transition-transform overflow-hidden relative">
+                                {post.author?.avatar_url ? (
+                                    <img
+                                        src={post.author.avatar_url}
+                                        alt={post.author.display_name || "User"}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    (post.author?.display_name || "U")[0]
+                                )}
+                            </div>
+                            <div className="text-left">
+                                <span className="block text-sm font-bold text-zinc-200 group-hover/id:text-white transition-colors tracking-wide">
+                                    {post.author?.display_name || "User"}
+                                </span>
+                                <span className="block text-[10px] text-zinc-600 font-mono uppercase tracking-wider">
+                                    {post.author?.username ? `@${post.author.username}` : 'Real Identity'}
+                                </span>
+                            </div>
+                        </>
+                    )}
+                </button>
+
+                {/* Right: Tag & Time */}
                 <div className="flex items-center gap-3">
                     <span className={`
-                        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold tracking-wide uppercase
+                        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold tracking-wide uppercase shadow-sm
                         ${styles.badge} transition-transform duration-300 group-hover:scale-105
                     `}>
                         <span className="text-sm">{config.icon}</span>
                         {config.label}
                     </span>
-                    {post.is_anonymous && (
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-                            Anonymous
-                        </span>
+
+                    {/* Moderation Status (Mini) */}
+                    {post.moderation_status === 'under_review' && (
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" title="Under Review" />
+                    )}
+                    {post.moderation_status === 'flagged' && (
+                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" title="Flagged" />
+                    )}
+
+                    {(!post.moderation_status || post.moderation_status === 'active') && (
+                        <span className="text-[10px] font-mono text-zinc-600">{post.created_at}</span>
                     )}
                 </div>
-
-                {/* Moderation Status Badge (Flagged/Under Review) */}
-                {post.moderation_status === 'under_review' && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold uppercase tracking-wide">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
-                        <span>Under Review</span>
-                    </div>
-                )}
-                {post.moderation_status === 'flagged' && (
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold uppercase tracking-wide">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>
-                        <span>Flagged</span>
-                    </div>
-                )}
-
-                {(!post.moderation_status || post.moderation_status === 'active') && (
-                    <span className="text-[10px] font-mono text-zinc-600">{post.created_at}</span>
-                )}
             </div>
 
             {/* Content w/ optional blur for Under Review */}
@@ -152,14 +269,12 @@ export function PostCard({
                 {/* Social Group */}
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => {
-                            haptic.like();
-                            setLiked(!liked);
-                        }}
-                        className="group flex items-center gap-2 text-zinc-400 hover:text-red-500 transition-transform active:scale-90 duration-200"
+                        onClick={handleLikeClick}
+                        disabled={isLiking}
+                        className={`group flex items-center gap-2 transition-transform active:scale-90 duration-200 ${isLiking ? 'opacity-70' : ''} ${liked ? 'text-red-500' : 'text-zinc-400 hover:text-red-500'}`}
                         aria-label="Like"
                     >
-                        <div className={`p-2 rounded-full transition-all duration-300 ${liked ? 'bg-red-500/10 text-red-500' : 'bg-white/5 group-hover:bg-red-500/10'}`}>
+                        <div className={`p-2 rounded-full transition-all duration-300 ${liked ? 'bg-red-500/10' : 'bg-white/5 group-hover:bg-red-500/10'}`}>
                             <svg
                                 className={`w-5 h-5 transition-transform duration-300 ${liked ? 'scale-110 fill-current' : 'scale-100 hover:scale-110'}`}
                                 viewBox="0 0 24 24"
@@ -173,7 +288,7 @@ export function PostCard({
                             </svg>
                         </div>
                         <span className={`text-xs font-bold font-mono ${liked ? 'text-red-500' : 'text-zinc-500 group-hover:text-zinc-300'}`}>
-                            {liked ? post.like_count + 1 : post.like_count}
+                            {likeCount}
                         </span>
                     </button>
 
@@ -194,11 +309,13 @@ export function PostCard({
 
                     {/* Bookmark/Save Button */}
                     <button
-                        className="group flex items-center gap-2 text-zinc-400 hover:text-yellow-500 transition-transform active:scale-90 duration-200"
+                        onClick={handleSaveClick}
+                        disabled={isSaving}
+                        className={`group flex items-center gap-2 transition-transform active:scale-90 duration-200 ${isSaving ? 'opacity-70' : ''} ${saved ? 'text-yellow-500' : 'text-zinc-400 hover:text-yellow-500'}`}
                         aria-label="Save"
                     >
-                        <div className="p-2 rounded-full bg-white/5 group-hover:bg-yellow-500/10 transition-colors">
-                            <svg className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <div className={`p-2 rounded-full transition-colors ${saved ? 'bg-yellow-500/20' : 'bg-white/5 group-hover:bg-yellow-500/10'}`}>
+                            <svg className={`w-5 h-5 transition-transform duration-300 ${saved ? 'fill-current scale-110' : 'group-hover:scale-110'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                             </svg>
                         </div>
