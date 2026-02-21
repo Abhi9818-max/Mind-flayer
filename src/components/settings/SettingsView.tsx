@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
     Moon, Volume2, VolumeX, Smartphone, Monitor, HardDrive,
     Download, Zap, Shield, Activity
@@ -156,6 +157,25 @@ export function SettingsView() {
                         <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${notifications ? 'translate-x-5' : 'translate-x-0'}`} />
                     </div>
                 </div>
+            </section>
+
+            {/* Protocols & Directives */}
+            <section className="space-y-4">
+                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    Protocols & Directives
+                </h3>
+                <Link href="/privacy" className="flex items-center justify-between p-4 rounded-2xl border border-white/5 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-xl bg-zinc-800 text-zinc-500">
+                            <Shield className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="font-bold text-white">Privacy Policy</p>
+                            <p className="text-xs text-zinc-500">How we handle your data in the void</p>
+                        </div>
+                    </div>
+                </Link>
             </section>
 
             <div className="text-center text-[10px] font-mono text-zinc-700 pt-8 opacity-50">
