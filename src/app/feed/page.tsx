@@ -114,7 +114,7 @@ function FeedContent() {
             <VerificationBanner />
 
             {/* Main Content Wrapper */}
-            <main className="relative z-10 pt-16 pb-24 lg:pb-10 transition-all duration-300">
+            <main className="relative z-10 pt-[calc(env(safe-area-inset-top,20px)+72px)] sm:pt-24 pb-24 lg:pb-10 transition-all duration-300">
                 {/* Filter Panel (Pushes content down) */}
                 <div className={`
                     w-full bg-[#09090b]/50 border-b border-white/5 overflow-hidden transition-all duration-300 ease-in-out

@@ -55,10 +55,10 @@ export function Navbar() {
     if (isHomePage) return null;
 
     return (
-        <header className="fixed top-4 left-4 right-4 z-50 h-[64px] glass-panel border border-white/10 rounded-2xl flex items-center shadow-2xl shadow-black/50">
-            <div className="w-full px-6 flex items-center justify-between">
+        <header className="fixed top-0 left-0 right-0 sm:top-4 sm:left-4 sm:right-4 z-50 min-h-[56px] sm:min-h-[64px] glass-panel border-b sm:border border-white/10 rounded-none sm:rounded-2xl flex items-center shadow-2xl shadow-black/50 pt-safe sm:pt-0">
+            <div className="w-full px-4 sm:px-6 py-2 sm:py-0 flex items-center justify-between">
                 {/* Logo - Far Left */}
-                <Link href="/feed" className="flex items-center gap-1 transition-opacity hover:opacity-80 min-w-[200px]">
+                <Link href="/feed" className="flex items-center gap-1 transition-opacity hover:opacity-80 shrink-0">
                     <Logo />
                 </Link>
 

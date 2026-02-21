@@ -67,7 +67,7 @@ export default function MessagesPage() {
             </Suspense>
             <MobileNav />
 
-            <main className="relative z-10 pt-8 lg:pt-24 pb-24 px-4 max-w-3xl mx-auto">
+            <main className="relative z-10 pt-[calc(env(safe-area-inset-top,20px)+72px)] sm:pt-24 pb-24 px-4 max-w-3xl mx-auto">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

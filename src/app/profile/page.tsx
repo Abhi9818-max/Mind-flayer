@@ -88,7 +88,7 @@ export default function ProfilePage() {
                 {/* ════════════════════════════════════════════════════════════
                     HERO — Full-bleed animated gradient with glassmorphic card
                    ════════════════════════════════════════════════════════════ */}
-                <div className="relative pt-16 overflow-hidden">
+                <div className="relative pt-[calc(env(safe-area-inset-top,20px)+72px)] sm:pt-24 overflow-hidden">
                     {/* BACKGROUND: Large animated gradient blobs */}
                     <div className="absolute inset-0">
                         {/* Primary blob */}

@@ -19,7 +19,7 @@ export function Logo({ className = "" }: { className?: string }) {
                 <span className="font-mono text-base tracking-[-0.05em] text-zinc-100 font-bold group-hover:text-red-500 transition-colors duration-300">
                     MIND_FLAYER
                 </span>
-                <span className="font-mono text-[9px] text-zinc-600 tracking-widest uppercase flex items-center gap-1">
+                <span className="font-mono text-[8px] sm:text-[9px] text-zinc-600 tracking-widest uppercase hidden sm:flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                     SYSTEM_ONLINE
                 </span>

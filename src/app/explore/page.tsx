@@ -45,7 +45,7 @@ export default function ExplorePage() {
             </Suspense>
             <MobileNav />
 
-            <main className="relative z-10 pt-8 lg:pt-24 pb-24 px-4 max-w-4xl mx-auto space-y-8">
+            <main className="relative z-10 pt-[calc(env(safe-area-inset-top,20px)+72px)] sm:pt-24 pb-24 px-4 max-w-4xl mx-auto space-y-8">
                 <div className="text-center space-y-2">
                     <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50">
                         Explore
