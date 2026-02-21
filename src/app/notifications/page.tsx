@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { LiquidBackground } from "@/components/ui/LiquidBackground";
-import { Bell, Heart, MessageCircle, AtSign, CheckCheck } from "lucide-react";
+import { Bell, Heart, MessageCircle, AtSign, CheckCheck, UserPlus, Sparkles } from "lucide-react";
 import { getNotifications, markAllAsRead, markAsRead, Notification } from "@/lib/services/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { EmptyNotifications } from "@/components/ui/EmptyState";
@@ -67,6 +67,8 @@ export default function NotificationsPage() {
             case 'like': return <Heart className="text-red-500" size={20} fill="currentColor" />;
             case 'comment': return <MessageCircle className="text-blue-400" size={20} />;
             case 'mention': return <AtSign className="text-purple-400" size={20} />;
+            case 'follow': return <UserPlus className="text-green-400" size={20} />;
+            case 'crush': return <Sparkles className="text-pink-400" size={20} />;
             default: return <Bell className="text-yellow-400" size={20} />;
         }
     };

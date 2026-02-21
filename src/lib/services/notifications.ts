@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 export interface Notification {
     id: string;
     user_id: string;
-    type: 'like' | 'comment' | 'system' | 'mention';
+    type: 'like' | 'comment' | 'system' | 'mention' | 'follow' | 'crush';
     reference_id: string | null;
     content: string;
     is_read: boolean;
@@ -61,7 +61,7 @@ export async function markAllAsRead() {
 // Helper to create notifications (to be used by other services)
 export async function createNotification(
     userId: string,
-    type: 'like' | 'comment' | 'system' | 'mention',
+    type: 'like' | 'comment' | 'system' | 'mention' | 'follow' | 'crush',
     content: string,
     referenceId?: string
 ) {
@@ -106,16 +106,13 @@ export async function createNotification(
 // Helper to get notification title based on type
 function getNotificationTitle(type: string): string {
     switch (type) {
-        case 'like':
-            return '❤️ New Like';
-        case 'comment':
-            return '💬 New Comment';
-        case 'mention':
-            return '📢 You were mentioned';
-        case 'system':
-            return '🔔 Mind-Flayer';
-        default:
-            return 'Mind-Flayer';
+        case 'like': return '❤️ New Like';
+        case 'comment': return '💬 New Comment';
+        case 'mention': return '📢 You were mentioned';
+        case 'follow': return '👤 New Follower';
+        case 'crush': return '💘 Secret Crush';
+        case 'system': return '🔔 Mind-Flayer';
+        default: return 'Mind-Flayer';
     }
 }
 
@@ -125,7 +122,10 @@ function getNotificationUrl(type: string, referenceId?: string): string {
         switch (type) {
             case 'like':
             case 'comment':
-                return `/post/${referenceId}`;
+                return `/comments/${referenceId}`;
+            case 'follow':
+            case 'crush':
+                return '/profile';
             default:
                 return '/notifications';
         }

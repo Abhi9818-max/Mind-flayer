@@ -40,6 +40,13 @@ export const crushService = {
             .insert({ admirer_id: user.id, target_id: targetId });
 
         if (error) throw error;
+
+        // Fire notification
+        try {
+            const { createNotification } = await import('./notifications');
+            await createNotification(targetId, 'crush', 'Someone has a crush on you! 💘');
+        } catch (e) { /* don't block */ }
+
         return { success: true };
     },
 

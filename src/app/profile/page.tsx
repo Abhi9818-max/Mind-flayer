@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Navbar } from "@/components/layout/Navbar";
-import { Bookmark, Edit3, MapPin, Sparkles, Eye, TrendingUp, Heart, Users, Settings, Grid3x3, BarChart3, Share2, Crown, LogOut } from "lucide-react";
+import { Bookmark, Edit3, MapPin, Sparkles, Eye, TrendingUp, Heart, Users, Settings, Grid3x3, BarChart3, Share2, Crown, LogOut, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PostCard } from "@/components/feed/PostCard";
@@ -11,6 +11,8 @@ import { SettingsView } from "@/components/settings/SettingsView";
 import { getPosts } from "@/lib/services/posts";
 import { getUserInteractions, getSavedPosts } from "@/lib/services/interactions";
 import { useToast } from "@/lib/context/ToastContext";
+import { crushService } from "@/lib/services/crush";
+import { followService } from "@/lib/services/follow";
 
 export default function ProfilePage() {
     const { showToast } = useToast();
@@ -23,6 +25,9 @@ export default function ProfilePage() {
     const [loadingPosts, setLoadingPosts] = useState(true);
     const [savedPosts, setSavedPosts] = useState<any[]>([]);
     const [loadingSaved, setLoadingSaved] = useState(false);
+    const [crushCount, setCrushCount] = useState(0);
+    const [followerCount, setFollowerCount] = useState(0);
+    const [followingCount, setFollowingCount] = useState(0);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -37,6 +42,22 @@ export default function ProfilePage() {
         }
         fetchProfile();
     }, []);
+
+    // Fetch crush and follow counts
+    useEffect(() => {
+        if (!userProfile?.id) return;
+        async function fetchSocialCounts() {
+            const [crushes, followers, following] = await Promise.all([
+                crushService.getAdmirerCount(userProfile.id),
+                followService.getFollowerCount(userProfile.id),
+                followService.getFollowingCount(userProfile.id),
+            ]);
+            setCrushCount(crushes);
+            setFollowerCount(followers);
+            setFollowingCount(following);
+        }
+        fetchSocialCounts();
+    }, [userProfile]);
 
     useEffect(() => {
         async function fetchUserFeed() {
@@ -206,9 +227,11 @@ export default function ProfilePage() {
                         <div className="flex items-center gap-0 mt-6 bg-white/[0.04] rounded-2xl border border-white/[0.06] overflow-hidden profile-stats-entry">
                             <StatBlock value={posts.length.toString()} label="Posts" />
                             <div className="w-px h-10 bg-white/[0.06]" />
-                            <StatBlock value="14" label="Admirers" highlight />
+                            <StatBlock value={crushCount.toString()} label="Crushes" highlight />
                             <div className="w-px h-10 bg-white/[0.06]" />
-                            <StatBlock value="128" label="Connections" />
+                            <StatBlock value={followerCount.toString()} label="Followers" />
+                            <div className="w-px h-10 bg-white/[0.06]" />
+                            <StatBlock value={followingCount.toString()} label="Following" />
                         </div>
 
                         {/* ── Buttons ── */}

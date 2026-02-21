@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { createNotification } from './notifications';
 
 // ==========================================
 // TYPES
@@ -37,10 +38,9 @@ export async function toggleLike(postId: string, currentLikeCount: number, isCur
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
-    const userHash = user.id; // Using auth.uid() text as hash for MVP
+    const userHash = user.id;
 
     if (isCurrentlyLiked) {
-        // Unlike: Wait for delete, then decrement count
         const { error: deleteError } = await supabase
             .from('likes')
             .delete()
@@ -48,13 +48,11 @@ export async function toggleLike(postId: string, currentLikeCount: number, isCur
 
         if (deleteError) throw deleteError;
 
-        // Decrement logic via RPC or simple update (supabase doesn't have native atomic decrement without RPC, so we do client-side optimistic + server sync)
         const newCount = Math.max(0, currentLikeCount - 1);
         await supabase.from('posts').update({ like_count: newCount }).eq('id', postId);
         return { isLiked: false, likeCount: newCount };
 
     } else {
-        // Like: Insert, then increment
         const { error: insertError } = await supabase
             .from('likes')
             .insert({ post_id: postId, user_hash: userHash });
@@ -63,6 +61,15 @@ export async function toggleLike(postId: string, currentLikeCount: number, isCur
 
         const newCount = currentLikeCount + 1;
         await supabase.from('posts').update({ like_count: newCount }).eq('id', postId);
+
+        // Fire notification to post author
+        try {
+            const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+            if (post && post.user_id !== user.id) {
+                await createNotification(post.user_id, 'like', 'Someone liked your post', postId);
+            }
+        } catch (e) { /* don't block */ }
+
         return { isLiked: true, likeCount: newCount };
     }
 }
@@ -249,6 +256,14 @@ export async function addComment(postId: string, content: string, isAnonymous: b
         author: Array.isArray((data as any).author) ? (data as any).author[0] : (data as any).author,
         replies: []
     } as Comment;
+
+    // Fire notification to post author
+    try {
+        const { data: post } = await supabase.from('posts').select('user_id').eq('id', postId).single();
+        if (post && post.user_id !== user.id) {
+            await createNotification(post.user_id, 'comment', 'Someone commented on your post', postId);
+        }
+    } catch (e) { /* don't block */ }
 
     return { comment: processedData, newCount };
 }
