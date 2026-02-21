@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { POST_CONFIG, PostType } from "@/types";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { AudioPlayer } from "@/components/feed/AudioPlayer";
 import { haptic } from "@/lib/utils/haptic";
 import { getPostTypeColor } from "@/lib/utils/postTypeColors";
 import { formatPostTime } from "@/lib/utils/formatTime";
-
-// ... existing imports ...
 
 interface Post {
     id: string;
@@ -19,6 +17,7 @@ interface Post {
     like_count: number;
     comment_count: number;
     created_at: string;
+    author_id?: string;
     author?: {
         display_name?: string;
         void_name?: string;
@@ -32,7 +31,6 @@ interface Post {
 }
 
 const typeStyles: Record<PostType | 'voice', { badge: string; border: string }> = {
-    // ... (unchanged)
     confession: { badge: 'bg-red-600/10 text-red-500 border-red-600/20', border: 'group-hover:border-red-600/30' },
     rumor: { badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20', border: 'group-hover:border-amber-500/30' },
     crush: { badge: 'bg-rose-500/10 text-rose-500 border-rose-500/20', border: 'group-hover:border-rose-500/30' },
@@ -49,12 +47,14 @@ export function PostCard({
     delay,
     onCommentClick,
     onChatClick,
+    currentUserId,
     isFocused = true
 }: {
     post: Post;
     delay: number;
     onCommentClick?: () => void;
     onChatClick?: () => void;
+    currentUserId?: string;
     isFocused?: boolean;
 }) {
     const { showToast } = useToast();
@@ -65,6 +65,16 @@ export function PostCard({
     const [saved, setSaved] = useState(post.hasSaved || false);
     const [isLiking, setIsLiking] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Long-press state for mobile save
+    const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const [longPressProgress, setLongPressProgress] = useState(0);
+    const longPressAnimationRef = useRef<number | null>(null);
+    const longPressStartRef = useRef<number>(0);
+    const LONG_PRESS_DURATION = 4000; // 4 seconds
+
+    // Check if this is the current user's own post
+    const isOwnPost = currentUserId && post.author_id === currentUserId;
 
     // Fallback for new types
     const config = POST_CONFIG[post.type as PostType] || { icon: '🎙️', label: 'Voice Note' };
@@ -80,7 +90,6 @@ export function PostCard({
                 rank: "secondary"
             });
         } else {
-            // Navigate to profile (Mock action)
             console.log("Navigate to profile:", post.author?.username);
         }
     };
@@ -88,7 +97,6 @@ export function PostCard({
     const handleLikeClick = async () => {
         if (isLiking) return;
 
-        // Optimistic UI update
         haptic.like();
         const prevLiked = liked;
         const prevCount = likeCount;
@@ -99,11 +107,9 @@ export function PostCard({
 
         try {
             const res = await toggleLike(post.id, prevCount, prevLiked);
-            // Sync with actual server response if needed
             setLiked(res.isLiked);
             setLikeCount(res.likeCount);
         } catch (error) {
-            // Revert on failure
             setLiked(prevLiked);
             setLikeCount(prevCount);
             showToast({ title: "Verification Failed", message: "Action blocked.", type: "error", rank: "secondary" });
@@ -134,6 +140,52 @@ export function PostCard({
         }
     };
 
+    // Long-press handlers for mobile save
+    const startLongPress = useCallback((e: React.TouchEvent) => {
+        // Only handle single finger touch
+        if (e.touches.length !== 1) return;
+
+        longPressStartRef.current = Date.now();
+
+        const animate = () => {
+            const elapsed = Date.now() - longPressStartRef.current;
+            const progress = Math.min(elapsed / LONG_PRESS_DURATION, 1);
+            setLongPressProgress(progress);
+
+            if (progress < 1) {
+                longPressAnimationRef.current = requestAnimationFrame(animate);
+            }
+        };
+
+        longPressAnimationRef.current = requestAnimationFrame(animate);
+
+        longPressTimerRef.current = setTimeout(() => {
+            haptic.light();
+            handleSaveClick();
+            cancelLongPress();
+        }, LONG_PRESS_DURATION);
+    }, [saved, isSaving]);
+
+    const cancelLongPress = useCallback(() => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+        if (longPressAnimationRef.current) {
+            cancelAnimationFrame(longPressAnimationRef.current);
+            longPressAnimationRef.current = null;
+        }
+        setLongPressProgress(0);
+    }, []);
+
+    // Clean up on unmount
+    useEffect(() => {
+        return () => {
+            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+            if (longPressAnimationRef.current) cancelAnimationFrame(longPressAnimationRef.current);
+        };
+    }, []);
+
     return (
         <SpotlightCard
             className={`
@@ -142,7 +194,7 @@ export function PostCard({
                 hover:shadow-red-900/20 hover:-translate-y-1
                 active:scale-[0.99] active:duration-150
                 ${styles.border} group
-                border-l-4
+                border-l-4 relative
             `}
             spotlightColor="rgba(255, 255, 255, 0.08)"
             style={{
@@ -150,9 +202,35 @@ export function PostCard({
                 animationFillMode: 'forwards',
                 borderLeftColor: typeColor.primary,
             }}
+            onTouchStart={startLongPress}
+            onTouchEnd={cancelLongPress}
+            onTouchCancel={cancelLongPress}
+            onTouchMove={cancelLongPress}
         >
-            {/* Glow effect on hover (Secondary layer) */}
-            <div className={`absolute inset-0 bg-gradient-to-br from-white/5 to-transparent transition-opacity duration-500 opacity-0 group-hover:opacity-100 pointer-events-none`} />
+            {/* Long-press progress indicator */}
+            {longPressProgress > 0 && (
+                <div className="absolute inset-0 z-50 pointer-events-none rounded-3xl overflow-hidden">
+                    <div
+                        className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-yellow-500 to-amber-400 transition-none"
+                        style={{ width: `${longPressProgress * 100}%` }}
+                    />
+                    {longPressProgress > 0.2 && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="bg-black/80 backdrop-blur-sm px-4 py-2 rounded-full border border-yellow-500/30 flex items-center gap-2">
+                                <svg className="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                </svg>
+                                <span className="text-xs font-bold text-yellow-400">
+                                    {saved ? 'Unsaving...' : 'Saving...'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Glow effect on hover */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent transition-opacity duration-500 opacity-0 group-hover:opacity-100 pointer-events-none" />
             <div className="absolute -inset-px rounded-3xl bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 blur-sm transition-opacity duration-500 group-hover:opacity-20 pointer-events-none" />
 
             {/* Moderation Overlay: Quarantined */}
@@ -173,7 +251,6 @@ export function PostCard({
             <div className="flex items-center justify-between mb-4 relative z-10">
 
                 {/* Left: Identity */}
-
                 <button
                     onClick={handleIdentityClick}
                     className="flex items-center gap-3 group/id cursor-pointer"
@@ -278,7 +355,6 @@ export function PostCard({
             </div>
 
             {/* Actions */}
-            {/* Actions Footer - Disable if quarantined (though handled by overlay above) */}
             <div className={`flex items-center justify-between pt-6 mt-2 border-t border-white/5 relative z-10 ${post.moderation_status === 'under_review' ? 'opacity-50 pointer-events-none' : ''}`}>
 
                 {/* Social Group */}
@@ -322,11 +398,11 @@ export function PostCard({
                         </span>
                     </button>
 
-                    {/* Bookmark/Save Button */}
+                    {/* Desktop-only Save Button */}
                     <button
                         onClick={handleSaveClick}
                         disabled={isSaving}
-                        className={`group flex items-center gap-2 transition-transform active:scale-90 duration-200 ${isSaving ? 'opacity-70' : ''} ${saved ? 'text-yellow-500' : 'text-zinc-400 hover:text-yellow-500'}`}
+                        className={`hidden sm:flex group items-center gap-2 transition-transform active:scale-90 duration-200 ${isSaving ? 'opacity-70' : ''} ${saved ? 'text-yellow-500' : 'text-zinc-400 hover:text-yellow-500'}`}
                         aria-label="Save"
                     >
                         <div className={`p-2 rounded-full transition-colors ${saved ? 'bg-yellow-500/20' : 'bg-white/5 group-hover:bg-yellow-500/10'}`}>
@@ -335,30 +411,32 @@ export function PostCard({
                             </svg>
                         </div>
                     </button>
+
+                    {/* Mobile saved indicator (no button, just a badge if already saved) */}
+                    {saved && (
+                        <div className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20">
+                            <svg className="w-3 h-3 text-yellow-500 fill-current" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            <span className="text-[9px] font-bold text-yellow-500 uppercase">Saved</span>
+                        </div>
+                    )}
                 </div>
 
-                {/* Primary Action: Connect */}
-                <button
-                    onClick={onChatClick}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-red-900/10 active:scale-95 group transition-all duration-300"
-                >
-                    <span className="text-zinc-400 group-hover:text-white font-medium text-xs tracking-wide uppercase transition-colors">Connect</span>
-                    <svg className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14" />
-                        <path d="m12 5 7 7-7 7" />
-                    </svg>
-                </button>
-
-                {/* More / Report */}
-                {/* <button className="absolute right-0 top-0 -mt-16 sm:mt-0 sm:relative p-2 text-zinc-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="1" />
-                        <circle cx="12" cy="5" r="1" />
-                        <circle cx="12" cy="19" r="1" />
-                    </svg>
-                </button> */}
+                {/* Primary Action: Connect — hidden for own posts */}
+                {!isOwnPost && (
+                    <button
+                        onClick={onChatClick}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-red-900/10 active:scale-95 group transition-all duration-300"
+                    >
+                        <span className="text-zinc-400 group-hover:text-white font-medium text-xs tracking-wide uppercase transition-colors">Connect</span>
+                        <svg className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                        </svg>
+                    </button>
+                )}
             </div>
         </SpotlightCard>
     );
 }
-

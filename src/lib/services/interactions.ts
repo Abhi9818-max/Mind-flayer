@@ -94,6 +94,64 @@ export async function toggleSave(postId: string, isCurrentlySaved: boolean) {
     }
 }
 
+/**
+ * Fetches all posts the current user has saved/bookmarked.
+ */
+export async function getSavedPosts() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    // Get saved post IDs
+    const { data: savedEntries, error: savedError } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+    if (savedError || !savedEntries || savedEntries.length === 0) return [];
+
+    const postIds = savedEntries.map((s: any) => s.post_id);
+
+    // Fetch the actual posts with author data
+    const { data: posts, error: postsError } = await supabase
+        .from('posts')
+        .select(`
+            *,
+            author:user_profiles (
+                void_name,
+                display_name,
+                avatar_url,
+                void_avatar
+            )
+        `)
+        .in('id', postIds)
+        .order('created_at', { ascending: false });
+
+    if (postsError || !posts) return [];
+
+    // Process author data (same logic as getPosts)
+    return posts.map((post: any) => {
+        const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
+        return {
+            ...post,
+            author: post.is_anonymous
+                ? {
+                    void_name: authorData?.void_name || "Anonymous User",
+                    display_name: "Anonymous",
+                    avatar_url: null,
+                    void_avatar: authorData?.void_avatar || null
+                }
+                : authorData || {
+                    void_name: "Unknown",
+                    display_name: "Unknown User"
+                },
+            author_id: post.user_id,
+            hasSaved: true, // We know these are saved
+        };
+    });
+}
+
 // ==========================================
 // COMMENTS
 // ==========================================

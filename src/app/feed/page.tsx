@@ -35,6 +35,7 @@ function FeedContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [posts, setPosts] = useState<any[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     const handleFilterClick = (type: PostType | "all") => {
         if (type === "all") {
@@ -49,6 +50,17 @@ function FeedContent() {
     const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [activeChatRecipient, setActiveChatRecipient] = useState<string | null>(null);
+
+    // Get current user ID
+    useEffect(() => {
+        async function fetchUserId() {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setCurrentUserId(user.id);
+        }
+        fetchUserId();
+    }, []);
 
     // Fetch Posts from Supabase
     useEffect(() => {
@@ -193,8 +205,8 @@ function FeedContent() {
                             <div key={post.id} data-id={post.id} className="post-wrapper transition-all duration-500">
                                 <PostCard
                                     post={post}
-                                    delay={i * 100} // Stagger by 100ms
-                                    // isFocused={focusedPostId === post.id}
+                                    delay={i * 100}
+                                    currentUserId={currentUserId || undefined}
                                     onCommentClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
                                     onChatClick={() => handleChatClick(post)}
                                 />

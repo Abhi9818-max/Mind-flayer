@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PostCard } from "@/components/feed/PostCard";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { getPosts } from "@/lib/services/posts";
-import { getUserInteractions } from "@/lib/services/interactions";
+import { getUserInteractions, getSavedPosts } from "@/lib/services/interactions";
 import { useToast } from "@/lib/context/ToastContext";
 
 export default function ProfilePage() {
@@ -21,6 +21,8 @@ export default function ProfilePage() {
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [posts, setPosts] = useState<any[]>([]);
     const [loadingPosts, setLoadingPosts] = useState(true);
+    const [savedPosts, setSavedPosts] = useState<any[]>([]);
+    const [loadingSaved, setLoadingSaved] = useState(false);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -59,6 +61,23 @@ export default function ProfilePage() {
         }
         if (userProfile) fetchUserFeed();
     }, [userProfile]);
+
+    // Fetch saved posts when the Saved tab is opened
+    useEffect(() => {
+        async function fetchSaved() {
+            if (activeTab !== 'saved') return;
+            setLoadingSaved(true);
+            try {
+                const saved = await getSavedPosts();
+                setSavedPosts(saved);
+            } catch (error) {
+                console.error("Failed to fetch saved posts:", error);
+            } finally {
+                setLoadingSaved(false);
+            }
+        }
+        fetchSaved();
+    }, [activeTab]);
 
     const displayName = userProfile?.display_name || "Unknown Entity";
     const username = userProfile?.username || "loading";
@@ -255,7 +274,21 @@ export default function ProfilePage() {
 
                     {/* SAVED */}
                     {activeTab === "saved" && (
-                        <EmptyState icon={<Bookmark size={36} />} title="Your vault is empty" subtitle="Bookmark posts to save them here for later." />
+                        <div className="space-y-4">
+                            {loadingSaved ? (
+                                [1, 2, 3].map(i => (
+                                    <div key={i} className="h-36 rounded-2xl bg-white/[0.02] border border-white/[0.04] animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
+                                ))
+                            ) : savedPosts.length === 0 ? (
+                                <EmptyState icon={<Bookmark size={36} />} title="Your vault is empty" subtitle="Bookmark posts to save them here for later." />
+                            ) : (
+                                savedPosts.map((post, i) => (
+                                    <div key={post.id} className="animate-fade-in-up" style={{ opacity: 0, animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}>
+                                        <PostCard post={post as any} delay={0} currentUserId={userProfile?.id} onCommentClick={() => { }} onChatClick={() => { }} />
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     )}
 
                     {/* STATS */}
