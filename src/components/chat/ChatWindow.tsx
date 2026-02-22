@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { getChatMessages, sendMessage, Message } from "@/lib/services/chat";
+import { getChatMessages, sendMessage, markMessagesAsRead, Message } from "@/lib/services/chat";
+import { AttachmentMenu, AttachmentType } from "./AttachmentMenu";
+import { MessageBubble } from "./MessageBubble";
+import { Paperclip, X } from "lucide-react";
 
 export function ChatWindow({
     chatId,
@@ -21,6 +24,10 @@ export function ChatWindow({
     const supabase = createClient();
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+    // Advanced Chat States
+    const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+
     // Initial Load & Auth
     useEffect(() => {
         const init = async () => {
@@ -30,6 +37,11 @@ export function ChatWindow({
             try {
                 const msgs = await getChatMessages(chatId);
                 setMessages(msgs || []);
+
+                // Mark loaded messages as read
+                if (msgs && msgs.length > 0) {
+                    await markMessagesAsRead(chatId);
+                }
             } catch (error) {
                 console.error("Failed to load messages:", error);
             } finally {
@@ -54,6 +66,26 @@ export function ChatWindow({
                 (payload: any) => {
                     const newMsg = payload.new as Message;
                     setMessages((prev) => [...prev, newMsg]);
+
+                    // Automatically mark as read if chat is open and we aren't the sender
+                    if (currentUserId && newMsg.sender_hash !== currentUserId) {
+                        markMessagesAsRead(chatId).catch(console.error);
+                    }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'chat_messages',
+                    filter: `chat_id=eq.${chatId}`
+                },
+                (payload: any) => {
+                    const updatedMsg = payload.new as Message;
+                    setMessages((prev) =>
+                        prev.map(msg => msg.id === updatedMsg.id ? { ...msg, read_at: updatedMsg.read_at } : msg)
+                    );
                 }
             )
             .subscribe();
@@ -75,11 +107,18 @@ export function ChatWindow({
         setNewMessage(""); // Optimistic clear
 
         try {
-            await sendMessage(chatId, tempContent);
+            await sendMessage(chatId, tempContent, replyingTo?.id);
+            setReplyingTo(null); // Clear reply state after send
         } catch (error) {
             console.error("Failed to send:", error);
             setNewMessage(tempContent); // Revert on error
         }
+    };
+
+    const handleAttachmentSelect = (type: AttachmentType) => {
+        setIsAttachmentMenuOpen(false);
+        console.log("Selected attachment:", type);
+        // TODO: Trigger actual file picker or logic based on type
     };
 
     return (
@@ -121,34 +160,58 @@ export function ChatWindow({
                     messages.map((msg) => {
                         const isMe = msg.sender_hash === currentUserId;
                         return (
-                            <div
+                            <MessageBubble
                                 key={msg.id}
-                                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                            >
-                                <div
-                                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${isMe
-                                        ? 'bg-purple-600 text-white rounded-br-none'
-                                        : 'bg-zinc-800 text-zinc-200 rounded-bl-none'
-                                        }`}
-                                >
-                                    {msg.content}
-                                </div>
-                                <span className="text-[10px] text-zinc-500 mt-1 px-1">
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
+                                message={msg}
+                                isMe={isMe}
+                                onReply={(m) => setReplyingTo(m)}
+                            />
                         );
                     })
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* Replying To Indicator */}
+            {replyingTo && (
+                <div className="px-4 py-2 bg-zinc-800/80 border-t border-purple-500/20 flex items-center justify-between">
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-xs text-purple-400 font-semibold mb-0.5">
+                            Replying to {replyingTo.sender_hash === currentUserId ? 'yourself' : 'them'}
+                        </span>
+                        <span className="text-sm text-zinc-300 truncate">
+                            {replyingTo.content}
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setReplyingTo(null)}
+                        className="p-1 rounded-full hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            {/* Attachment Menu Popup */}
+            <AttachmentMenu
+                isOpen={isAttachmentMenuOpen}
+                onClose={() => setIsAttachmentMenuOpen(false)}
+                onSelect={handleAttachmentSelect}
+            />
+
             {/* Input */}
-            <div className="p-3 border-t border-white/5 bg-zinc-900">
+            <div className="p-3 border-t border-white/5 bg-zinc-900 relative">
                 <form
                     onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                    className="flex gap-2"
+                    className="flex gap-2 items-end"
                 >
+                    <button
+                        type="button"
+                        onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                        className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${isAttachmentMenuOpen ? 'bg-purple-600/20 text-purple-400' : 'hover:bg-zinc-800 text-zinc-400 hover:text-white'}`}
+                    >
+                        <Paperclip size={20} className={isAttachmentMenuOpen ? "transform rotate-45 transition-transform" : "transition-transform"} />
+                    </button>
                     <input
                         type="text"
                         value={newMessage}

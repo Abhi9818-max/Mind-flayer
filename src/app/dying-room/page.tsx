@@ -5,14 +5,21 @@ import { useRouter } from "next/navigation";
 import { useBattery, isEligible, getEntryThreshold } from "@/lib/hooks/useBattery";
 import { useToast } from "@/lib/context/ToastContext";
 import { createClient } from "@/lib/supabase/client";
-import { BatteryLow, BatteryCharging, Skull, Zap, Send, ArrowLeft } from "lucide-react";
+import { BatteryLow, BatteryCharging, Skull, Zap, Send, ArrowLeft, Paperclip, X } from "lucide-react";
+import { AttachmentMenu, AttachmentType } from "@/components/chat/AttachmentMenu";
+import { DyingMessageBubble } from "@/components/void/DyingMessageBubble";
 
 interface DyingMessage {
     id: string;
     content: string;
     author_name: string;
+    author_id?: string;
     created_at: string;
     battery_level: number;
+    reply_to_id?: string | null;
+    replied_to?: { content: string; author_name: string } | null;
+    attachment_url?: string | null;
+    attachment_type?: AttachmentType | null;
 }
 
 export default function DyingRoomPage() {
@@ -28,6 +35,10 @@ export default function DyingRoomPage() {
     const [glitchFrame, setGlitchFrame] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const wasInsideRef = useRef(false);
+
+    // Advanced Chat States for the Void
+    const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<DyingMessage | null>(null);
 
     const threshold = getEntryThreshold(battery.isMobile);
     const thresholdPercent = Math.round(threshold * 100);
@@ -121,10 +132,21 @@ export default function DyingRoomPage() {
         async function loadMessages() {
             const { data } = await supabase
                 .from("dying_room_messages")
-                .select("*")
+                .select(`
+                    *,
+                    replied_to:reply_to_id(content, author_name)
+                `)
                 .order("created_at", { ascending: true })
                 .limit(50);
-            if (data) setMessages(data as DyingMessage[]);
+
+            if (data) {
+                // Formatting because supabase self-joins might return an array for replied_to
+                const formatted = data.map((msg: any) => ({
+                    ...msg,
+                    replied_to: Array.isArray(msg.replied_to) ? msg.replied_to[0] : msg.replied_to
+                }));
+                setMessages(formatted as DyingMessage[]);
+            }
         }
 
         loadMessages();
@@ -136,8 +158,18 @@ export default function DyingRoomPage() {
                 event: "INSERT",
                 schema: "public",
                 table: "dying_room_messages",
-            }, (payload: any) => {
-                setMessages(prev => [...prev, payload.new as DyingMessage]);
+            }, async (payload: any) => {
+                // Fetch the reply context if it exists because realtime payloads don't include joins
+                let newMsg = payload.new as DyingMessage;
+                if (newMsg.reply_to_id) {
+                    const { data: replyCtx } = await supabase
+                        .from('dying_room_messages')
+                        .select('content, author_name')
+                        .eq('id', newMsg.reply_to_id)
+                        .single();
+                    if (replyCtx) newMsg.replied_to = replyCtx;
+                }
+                setMessages(prev => [...prev, newMsg]);
             })
             .subscribe();
 
@@ -165,14 +197,22 @@ export default function DyingRoomPage() {
                 author_name: authorName,
                 author_id: currentUser.id,
                 battery_level: batteryPercent,
+                reply_to_id: replyingTo?.id || null
             });
 
             setNewMessage("");
+            setReplyingTo(null);
         } catch (e) {
             console.error("Failed to send:", e);
         } finally {
             setSending(false);
         }
+    };
+
+    const handleAttachmentSelect = (type: AttachmentType) => {
+        setIsAttachmentMenuOpen(false);
+        console.log("Selected attachment for Void:", type);
+        // TODO: Handle void media upload
     };
 
     // ====== RENDER STATES ======
@@ -362,34 +402,56 @@ export default function DyingRoomPage() {
                     )}
 
                     {messages.map((msg) => (
-                        <div
+                        <DyingMessageBubble
                             key={msg.id}
-                            className="group relative bg-zinc-950/80 border border-red-950/20 rounded-xl px-4 py-3 hover:border-red-900/30 transition-all"
-                        >
-                            <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-[11px] font-bold text-red-700 tracking-wide flex items-center gap-1.5">
-                                    {msg.author_name}
-                                    <span className="text-[8px] font-mono text-red-950 px-1 py-0.5 rounded bg-red-950/30">
-                                        🔋 {msg.battery_level}%
-                                    </span>
-                                </span>
-                                <span className="text-[9px] text-zinc-800 font-mono">
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                            </div>
-                            <p className="text-sm text-zinc-400 leading-relaxed">
-                                {msg.content}
-                            </p>
-                        </div>
+                            message={msg}
+                            onReply={(m) => setReplyingTo(m)}
+                        />
                     ))}
 
                     <div ref={messagesEndRef} />
                 </div>
             </div>
 
+            {/* Replying To Context Bar */}
+            {replyingTo && (
+                <div className="px-4 py-2 bg-red-950/90 border-t border-red-900/40 flex items-center justify-between backdrop-blur-xl z-20">
+                    <div className="flex flex-col overflow-hidden">
+                        <span className="text-[10px] text-red-500 font-mono tracking-widest uppercase mb-0.5">
+                            Quoting: {replyingTo.author_name}
+                        </span>
+                        <span className="text-xs text-red-200/70 truncate border-l-2 border-red-800 pl-2">
+                            {replyingTo.content}
+                        </span>
+                    </div>
+                    <button
+                        onClick={() => setReplyingTo(null)}
+                        className="p-1 rounded-sm hover:bg-red-900/50 text-red-700 hover:text-red-400 transition-colors"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
+
+            {/* Attachment Menu Popup */}
+            <AttachmentMenu
+                isOpen={isAttachmentMenuOpen}
+                onClose={() => setIsAttachmentMenuOpen(false)}
+                onSelect={handleAttachmentSelect}
+            />
+
             {/* Message Input */}
             <div className="sticky bottom-0 z-30 bg-black/90 backdrop-blur-xl border-t border-red-950/20 px-4 py-3">
-                <div className="max-w-lg mx-auto flex items-center gap-3">
+                <div className="max-w-lg mx-auto flex items-center gap-2 sm:gap-3">
+                    <button
+                        onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                        className={`w-10 h-10 flex-shrink-0 rounded-xl border flex items-center justify-center transition-all ${isAttachmentMenuOpen
+                            ? 'bg-red-950/60 border-red-800 text-red-400'
+                            : 'bg-zinc-950 border-red-950/20 text-zinc-500 hover:text-red-500/80 hover:border-red-900/40 hover:bg-red-950/20'
+                            }`}
+                    >
+                        <Paperclip size={18} className={isAttachmentMenuOpen ? "transform rotate-45 transition-transform" : "transition-transform"} />
+                    </button>
                     <input
                         type="text"
                         value={newMessage}

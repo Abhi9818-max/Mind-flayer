@@ -16,6 +16,12 @@ export interface Message {
     sender_hash: string;
     content: string;
     created_at: string;
+    reply_to_id?: string | null;
+    attachment_url?: string | null;
+    attachment_type?: 'image' | 'document' | 'audio' | 'location' | 'poll' | null;
+    attachment_metadata?: any;
+    read_at?: string | null;
+    replied_to?: { content: string; sender_hash: string } | null;
 }
 
 export async function createChat(postId: string, recipientHash: string) {
@@ -85,7 +91,13 @@ export async function getConversations() {
     return data;
 }
 
-export async function sendMessage(chatId: string, content: string) {
+export async function sendMessage(
+    chatId: string,
+    content: string,
+    replyToId?: string | null,
+    attachmentUrl?: string | null,
+    attachmentType?: string | null
+) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -96,7 +108,10 @@ export async function sendMessage(chatId: string, content: string) {
         .insert({
             chat_id: chatId,
             sender_hash: user.id,
-            content
+            content,
+            reply_to_id: replyToId,
+            attachment_url: attachmentUrl,
+            attachment_type: attachmentType
         })
         .select()
         .single();
@@ -110,10 +125,17 @@ export async function getChatMessages(chatId: string) {
 
     const { data, error } = await supabase
         .from('chat_messages')
-        .select('*')
+        .select(`
+            *,
+            replied_to:reply_to_id(content, sender_hash)
+        `)
         .eq('chat_id', chatId)
         .order('created_at', { ascending: true });
 
     if (error) throw error;
-    return data;
+    // Map array wrapping issue with Supabase self joins (sometimes returns arrays)
+    return data.map((msg: any) => ({
+        ...msg,
+        replied_to: Array.isArray(msg.replied_to) ? msg.replied_to[0] : msg.replied_to
+    })) as Message[];
 }
