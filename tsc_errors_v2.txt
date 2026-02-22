@@ -1,0 +1,2 @@
+﻿src/app/profile/page.tsx(35,18): error TS2304: Cannot find name 'user'.
+src/app/profile/page.tsx(36,29): error TS2304: Cannot find name 'user'.

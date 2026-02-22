@@ -32,9 +32,14 @@ export default function ProfilePage() {
 
     useEffect(() => {
         async function fetchProfile() {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+            const isAdmin = user.email === 'veritas9818@gmail.com';
+
             try {
                 const profile = await import('@/lib/services/user').then(m => m.getUserProfile());
-                if (profile) setUserProfile(profile);
+                if (profile) setUserProfile({ ...profile, isAdmin });
             } catch (e) {
                 console.error("Failed to load profile", e);
             } finally {
@@ -184,12 +189,10 @@ export default function ProfilePage() {
                             {bio}
                         </p>
 
-                        {/* Crush badge */}
-                        {crushCount > 0 && (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold mb-4">
-                                <Heart size={12} fill="currentColor" /> {crushCount} {crushCount === 1 ? 'Crush' : 'Crushes'}
-                            </div>
-                        )}
+                        {/* Crush badge - always show if possible */}
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold mb-4">
+                            <Heart size={12} fill={crushCount > 0 ? "currentColor" : "none"} /> {crushCount} {crushCount === 1 ? 'Crush' : 'Crushes'}
+                        </div>
 
                         {/* Actions */}
                         <div className="flex gap-2 mb-1">
@@ -205,12 +208,14 @@ export default function ProfilePage() {
                             >
                                 Share Profile
                             </button>
-                            <Link href="/admin">
-                                <button className="h-9 px-3 rounded-lg bg-gradient-to-r from-amber-600/20 to-red-600/20 border border-amber-500/20 text-amber-400 hover:border-amber-500/40 active:scale-[0.98] transition-all flex items-center gap-1.5">
-                                    <Zap size={14} fill="currentColor" />
-                                    <span className="text-[12px] font-bold hidden sm:inline">The Forge</span>
-                                </button>
-                            </Link>
+                            {userProfile?.isAdmin && (
+                                <Link href="/admin">
+                                    <button className="h-9 px-3 rounded-lg bg-gradient-to-r from-amber-600/20 to-red-600/20 border border-amber-500/20 text-amber-400 hover:border-amber-500/40 active:scale-[0.98] transition-all flex items-center gap-1.5 animate-pulse">
+                                        <Zap size={14} fill="currentColor" />
+                                        <span className="text-[12px] font-black tracking-tighter uppercase hidden sm:inline">Forged Power</span>
+                                    </button>
+                                </Link>
+                            )}
                             <button
                                 onClick={handleLogout}
                                 className="h-9 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 active:scale-[0.98] transition-all sm:hidden"

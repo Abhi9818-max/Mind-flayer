@@ -41,6 +41,8 @@ const typeStyles: Record<PostType | 'voice', { badge: string; border: string }> 
 
 import { useToast } from "@/lib/context/ToastContext";
 import { toggleLike, toggleSave } from "@/lib/services/interactions";
+import { crushService } from "@/lib/services/crush";
+import { Sparkles, Heart } from "lucide-react";
 
 export function PostCard({
     post,
@@ -69,6 +71,8 @@ export function PostCard({
     // Long-press state for mobile save
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const [longPressProgress, setLongPressProgress] = useState(0);
+    const [hasCrushed, setHasCrushed] = useState(false);
+    const [isCrushing, setIsCrushing] = useState(false);
     const longPressAnimationRef = useRef<number | null>(null);
     const longPressStartRef = useRef<number>(0);
     const LONG_PRESS_DURATION = 4000; // 4 seconds
@@ -139,6 +143,45 @@ export function PostCard({
             setIsSaving(false);
         }
     };
+
+    const handleCrushClick = async () => {
+        if (isCrushing || hasCrushed || isOwnPost) return;
+
+        haptic.success();
+        setIsCrushing(true);
+
+        try {
+            const authorId = post.author_id;
+            if (!authorId) throw new Error("No author ID");
+
+            const result = await crushService.markCrush(authorId);
+            if (result.success) {
+                setHasCrushed(true);
+                showToast({
+                    title: "Crush Marked!",
+                    message: "Identity encrypted. They'll only see the total count.",
+                    type: "success",
+                    rank: "primary"
+                });
+            } else {
+                showToast({ title: "Note", message: result.message || "Unable to mark crush", type: "info", rank: "secondary" });
+            }
+        } catch (error) {
+            showToast({ title: "Neural Link Error", message: "Failed to transmit crush signal.", type: "error", rank: "secondary" });
+        } finally {
+            setIsCrushing(false);
+        }
+    };
+
+    // Check crush status on load
+    useEffect(() => {
+        if (!currentUserId || !post.author_id || isOwnPost) return;
+        async function checkCrush() {
+            const crushed = await crushService.hasCrushed(post.author_id!);
+            setHasCrushed(crushed);
+        }
+        checkCrush();
+    }, [currentUserId, post.author_id, isOwnPost]);
 
     // Long-press handlers for mobile save
     const startLongPress = useCallback((e: React.TouchEvent) => {
@@ -423,18 +466,35 @@ export function PostCard({
                     )}
                 </div>
 
-                {/* Primary Action: Connect — hidden for own posts */}
+                {/* Primary Action: Connect / Crush — hidden for own posts */}
                 {!isOwnPost && (
-                    <button
-                        onClick={onChatClick}
-                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-red-900/10 active:scale-95 group transition-all duration-300"
-                    >
-                        <span className="text-zinc-400 group-hover:text-white font-medium text-xs tracking-wide uppercase transition-colors">Connect</span>
-                        <svg className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 12h14" />
-                            <path d="m12 5 7 7-7 7" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleCrushClick}
+                            disabled={isCrushing || hasCrushed}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-full border transition-all duration-300 active:scale-95 group
+                                ${hasCrushed
+                                    ? 'bg-pink-500/10 border-pink-500/20 text-pink-500'
+                                    : 'bg-white/5 border-white/5 hover:bg-pink-500/10 hover:border-pink-500/20 text-zinc-400 hover:text-pink-400'
+                                }`}
+                        >
+                            <Sparkles size={14} className={hasCrushed ? "fill-current" : "group-hover:animate-spin"} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">
+                                {hasCrushed ? 'Crushed' : 'Crush'}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={onChatClick}
+                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/20 hover:shadow-lg hover:shadow-red-900/10 active:scale-95 group transition-all duration-300"
+                        >
+                            <span className="text-zinc-400 group-hover:text-white font-medium text-xs tracking-wide uppercase transition-colors">Connect</span>
+                            <svg className="w-4 h-4 text-zinc-500 group-hover:text-red-500 transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M5 12h14" />
+                                <path d="m12 5 7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
                 )}
             </div>
         </SpotlightCard>
