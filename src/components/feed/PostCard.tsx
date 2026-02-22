@@ -237,7 +237,7 @@ export function PostCard({
                 scale-100 opacity-0 translate-y-4 z-10
                 hover:-translate-y-0.5
                 active:scale-[0.998] active:duration-150
-                ${styles.border} group
+                group
                 relative overflow-hidden
             `}
             spotlightColor="rgba(255, 255, 255, 0.04)"
@@ -372,7 +372,7 @@ export function PostCard({
                         )}
 
                         <span className={`
-                            inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-semibold tracking-widest uppercase
+                            inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-semibold tracking-widest uppercase
                             ${styles.badge} transition-all duration-300 group-hover:scale-[1.02]
                         `}>
                             <span className="text-xs">{config.icon}</span>
