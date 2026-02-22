@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
-import { Reply } from "lucide-react";
+import { Reply, FileText, Play } from "lucide-react";
 import { Message } from "@/lib/services/chat";
 
 interface MessageBubbleProps {
@@ -69,7 +69,25 @@ export function MessageBubble({ message, isMe, onReply }: MessageBubbleProps) {
                             : 'bg-zinc-800 text-zinc-200 rounded-bl-none'
                             }`}
                     >
-                        {message.content}
+                        {/* Attachments */}
+                        {message.attachment_url && message.attachment_type === 'image' && (
+                            <div className="mb-2 -mx-2 -mt-1 overflow-hidden rounded-xl">
+                                <img src={message.attachment_url} alt="attachment" className="w-full max-h-48 object-cover hover:scale-105 transition-transform cursor-pointer" />
+                            </div>
+                        )}
+                        {message.attachment_url && message.attachment_type === 'document' && (
+                            <a href={message.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 mb-2 rounded-lg text-xs font-semibold ${isMe ? 'bg-purple-700/50 hover:bg-purple-700 border border-purple-400/30' : 'bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600'}`}>
+                                <FileText size={16} />
+                                <span className="truncate">{message.attachment_metadata?.name || 'Document'}</span>
+                            </a>
+                        )}
+                        {message.attachment_url && message.attachment_type === 'audio' && (
+                            <div className="mb-2">
+                                <audio controls src={message.attachment_url} className="h-8 max-w-[200px]" />
+                            </div>
+                        )}
+
+                        <span className="whitespace-pre-wrap">{message.content}</span>
                     </div>
                 </div>
             </motion.div>

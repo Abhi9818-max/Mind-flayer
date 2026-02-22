@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { BatteryLow, BatteryCharging, Skull, Zap, Send, ArrowLeft, Paperclip, X } from "lucide-react";
 import { AttachmentMenu, AttachmentType } from "@/components/chat/AttachmentMenu";
 import { DyingMessageBubble } from "@/components/void/DyingMessageBubble";
+import { uploadChatAttachment } from "@/lib/services/upload";
 
 interface DyingMessage {
     id: string;
@@ -39,6 +40,9 @@ export default function DyingRoomPage() {
     // Advanced Chat States for the Void
     const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
     const [replyingTo, setReplyingTo] = useState<DyingMessage | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState<AttachmentType | null>(null);
 
     const threshold = getEntryThreshold(battery.isMobile);
     const thresholdPercent = Math.round(threshold * 100);
@@ -192,13 +196,27 @@ export default function DyingRoomPage() {
             const supabase = createClient();
             const authorName = userProfile?.void_name || userProfile?.display_name || "Unknown Entity";
 
-            await supabase.from("dying_room_messages").insert({
+            const { data, error } = await supabase.from("dying_room_messages").insert({
                 content: newMessage.trim(),
                 author_name: authorName,
                 author_id: currentUser.id,
                 battery_level: batteryPercent,
                 reply_to_id: replyingTo?.id || null
-            });
+            }).select(`
+                *,
+                replied_to:reply_to_id(content, author_name)
+            `).single();
+
+            if (data) {
+                const formatted = {
+                    ...data,
+                    replied_to: Array.isArray(data.replied_to) ? data.replied_to[0] : (data.replied_to || (replyingTo ? { content: replyingTo.content, author_name: replyingTo.author_name } : null))
+                };
+                setMessages(prev => {
+                    if (prev.find(m => m.id === formatted.id)) return prev;
+                    return [...prev, formatted as DyingMessage]
+                });
+            }
 
             setNewMessage("");
             setReplyingTo(null);
@@ -209,10 +227,50 @@ export default function DyingRoomPage() {
         }
     };
 
-    const handleAttachmentSelect = (type: AttachmentType) => {
-        setIsAttachmentMenuOpen(false);
-        console.log("Selected attachment for Void:", type);
-        // TODO: Handle void media upload
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedAttachmentType || !currentUser) return;
+
+        setIsUploading(true);
+        try {
+            const supabase = createClient();
+            const { url, metadata } = await uploadChatAttachment(file);
+            const authorName = userProfile?.void_name || userProfile?.display_name || "Unknown Entity";
+
+            // Send void message with attachment
+            const { data, error } = await supabase.from("dying_room_messages").insert({
+                content: `[Attached ${selectedAttachmentType}]: ${url}`,
+                author_name: authorName,
+                author_id: currentUser.id,
+                battery_level: batteryPercent,
+                reply_to_id: replyingTo?.id || null,
+                attachment_url: url,
+                attachment_type: selectedAttachmentType,
+            }).select(`
+                *,
+                replied_to:reply_to_id(content, author_name)
+            `).single();
+
+            if (data) {
+                const formatted = {
+                    ...data,
+                    replied_to: Array.isArray(data.replied_to) ? data.replied_to[0] : (data.replied_to || (replyingTo ? { content: replyingTo.content, author_name: replyingTo.author_name } : null))
+                };
+                setMessages(prev => {
+                    if (prev.find(m => m.id === formatted.id)) return prev;
+                    return [...prev, formatted as DyingMessage]
+                });
+            }
+            setReplyingTo(null);
+
+        } catch (error) {
+            console.error("Failed to upload/send attachment:", error);
+            // using toast instead of standard alert to protect aesthetics
+            alert("Failed to send attachment to the Void. It was rejected.");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
     };
 
     // ====== RENDER STATES ======
@@ -409,6 +467,15 @@ export default function DyingRoomPage() {
                         />
                     ))}
 
+                    {isUploading && (
+                        <div className="flex items-center justify-end animate-fade-in-up mt-2">
+                            <div className="bg-red-950/80 text-red-400 rounded-xl px-4 py-2 text-xs flex items-center gap-2 border border-red-900/30">
+                                <div className="w-3 h-3 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+                                <span className="opacity-90 font-mono tracking-widest uppercase">Uploading {selectedAttachmentType}...</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                 </div>
             </div>
@@ -437,7 +504,28 @@ export default function DyingRoomPage() {
             <AttachmentMenu
                 isOpen={isAttachmentMenuOpen}
                 onClose={() => setIsAttachmentMenuOpen(false)}
-                onSelect={handleAttachmentSelect}
+                onSelect={(type) => {
+                    setIsAttachmentMenuOpen(false);
+                    setSelectedAttachmentType(type);
+                    if (type === 'image' || type === 'document' || type === 'audio') {
+                        if (fileInputRef.current) {
+                            if (type === 'image') fileInputRef.current.accept = "image/*";
+                            if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                            if (type === 'audio') fileInputRef.current.accept = "audio/*";
+                            fileInputRef.current.click();
+                        }
+                    } else {
+                        console.log("Room Attachment Selected:", type);
+                    }
+                }}
+            />
+
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
             />
 
             {/* Message Input */}

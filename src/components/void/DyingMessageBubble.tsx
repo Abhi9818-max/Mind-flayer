@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, useAnimation, PanInfo } from "framer-motion";
-import { Reply } from "lucide-react";
+import { Reply, FileText } from "lucide-react";
 
 interface DyingMessage {
     id: string;
@@ -83,7 +83,26 @@ export function DyingMessageBubble({ message, onReply }: DyingMessageBubbleProps
                                 {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </span>
                         </div>
-                        <p className="text-sm text-zinc-400 leading-relaxed break-words">
+
+                        {/* Attachments */}
+                        {message.attachment_url && message.attachment_type === 'image' && (
+                            <div className="mb-2 -mx-2 -mt-1 overflow-hidden rounded-xl border border-red-900/20">
+                                <img src={message.attachment_url} alt="attachment" className="w-full max-h-48 object-cover hover:scale-105 transition-transform cursor-pointer grayscale-[50%] sepia-[20%] hue-rotate-[-30deg]" />
+                            </div>
+                        )}
+                        {message.attachment_url && message.attachment_type === 'document' && (
+                            <a href={message.attachment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 mb-2 rounded-lg text-xs font-semibold bg-red-950/40 hover:bg-red-900/40 border border-red-900/30 text-red-400">
+                                <FileText size={16} />
+                                <span className="truncate">{message.attachment_metadata?.name || 'Document'}</span>
+                            </a>
+                        )}
+                        {message.attachment_url && message.attachment_type === 'audio' && (
+                            <div className="mb-2">
+                                <audio controls src={message.attachment_url} className="h-8 max-w-[200px] grayscale sepia hue-rotate-[-30deg]" />
+                            </div>
+                        )}
+
+                        <p className="text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
                             {message.content}
                         </p>
                     </div>

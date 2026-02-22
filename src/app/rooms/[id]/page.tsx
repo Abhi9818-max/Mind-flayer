@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Send, Users } from "lucide-react";
+import { ChevronLeft, Send, Users, Paperclip } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { AttachmentMenu, AttachmentType } from "@/components/chat/AttachmentMenu";
+import { uploadChatAttachment } from "@/lib/services/upload";
 
 interface Message {
     id: string;
@@ -41,6 +43,10 @@ function RoomChatContent() {
     const [status, setStatus] = useState<'CONNECTING' | 'CONNECTED' | 'DISCONNECTED'>('CONNECTING');
     const [memberCount, setMemberCount] = useState(0);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState<AttachmentType | null>(null);
 
     useEffect(() => {
         supabase.auth.getUser().then((res: any) => {
@@ -139,6 +145,35 @@ function RoomChatContent() {
         }
     };
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedAttachmentType || !userId) return;
+
+        setIsUploading(true);
+        try {
+            const { url, metadata } = await uploadChatAttachment(file);
+
+            // Send room message with attachment
+            // Note: Since public rooms don't display sophisticated media yet, 
+            // we'll send a text format but eventually public rooms need attachment columns
+            const { error } = await supabase
+                .from('live_messages')
+                .insert({
+                    room_id: roomId,
+                    content: `[Attached ${selectedAttachmentType}]: ${url}`,
+                    is_anonymous: isAnonymous,
+                    user_id: userId
+                });
+
+        } catch (error) {
+            console.error("Failed to upload/send attachment:", error);
+            alert("Failed to send attachment");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#030303] text-white flex flex-col">
             {/* Header */}
@@ -173,8 +208,8 @@ function RoomChatContent() {
                     <button
                         onClick={() => setIsAnonymous(!isAnonymous)}
                         className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${isAnonymous
-                                ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                                : 'bg-white/[0.04] border-white/[0.08] text-zinc-400'
+                            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                            : 'bg-white/[0.04] border-white/[0.08] text-zinc-400'
                             }`}
                     >
                         {isAnonymous ? '🌑 Anon' : '👤 Public'}
@@ -224,8 +259,8 @@ function RoomChatContent() {
                                         )}
                                         <div
                                             className={`px-3.5 py-2 text-[13px] leading-relaxed ${isMe
-                                                    ? 'bg-red-600 text-white rounded-2xl rounded-br-md'
-                                                    : 'bg-zinc-800/80 text-zinc-200 rounded-2xl rounded-bl-md border border-white/[0.04]'
+                                                ? 'bg-red-600 text-white rounded-2xl rounded-br-md'
+                                                : 'bg-zinc-800/80 text-zinc-200 rounded-2xl rounded-bl-md border border-white/[0.04]'
                                                 }`}
                                         >
                                             {msg.content}
@@ -238,13 +273,57 @@ function RoomChatContent() {
                             );
                         })
                     )}
+
+                    {isUploading && (
+                        <div className="flex items-center justify-end animate-fade-in-up">
+                            <div className="bg-zinc-800 text-white rounded-2xl p-3 text-sm flex items-center gap-2 border border-white/10">
+                                <div className="w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+                                <span className="opacity-90">Uploading {selectedAttachmentType}...</span>
+                            </div>
+                        </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                 </div>
             </div>
 
+            {/* Attachment Menu Popup */}
+            <AttachmentMenu
+                isOpen={isAttachmentMenuOpen}
+                onClose={() => setIsAttachmentMenuOpen(false)}
+                onSelect={(type) => {
+                    setIsAttachmentMenuOpen(false);
+                    setSelectedAttachmentType(type);
+                    if (type === 'image' || type === 'document' || type === 'audio') {
+                        if (fileInputRef.current) {
+                            if (type === 'image') fileInputRef.current.accept = "image/*";
+                            if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                            if (type === 'audio') fileInputRef.current.accept = "audio/*";
+                            fileInputRef.current.click();
+                        }
+                    } else {
+                        console.log("Room Attachment Selected:", type);
+                    }
+                }}
+            />
+
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+            />
+
             {/* Input */}
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#030303]/90 backdrop-blur-xl border-t border-white/[0.06] pb-safe">
                 <div className="flex items-center gap-2 px-4 py-3 max-w-2xl mx-auto">
+                    <button
+                        onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                        className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${isAttachmentMenuOpen ? 'bg-red-600/20 text-red-500' : 'hover:bg-zinc-800 text-zinc-500 hover:text-white'}`}
+                    >
+                        <Paperclip size={20} className={isAttachmentMenuOpen ? "transform rotate-45 transition-transform" : "transition-transform"} />
+                    </button>
                     <div className="flex-1 bg-zinc-900/80 rounded-full border border-white/[0.06] focus-within:border-white/[0.12] transition-colors">
                         <input
                             type="text"

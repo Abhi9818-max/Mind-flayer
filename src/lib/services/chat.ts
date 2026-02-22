@@ -96,7 +96,8 @@ export async function sendMessage(
     content: string,
     replyToId?: string | null,
     attachmentUrl?: string | null,
-    attachmentType?: string | null
+    attachmentType?: string | null,
+    attachmentMetadata?: any
 ) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -111,7 +112,8 @@ export async function sendMessage(
             content,
             reply_to_id: replyToId,
             attachment_url: attachmentUrl,
-            attachment_type: attachmentType
+            attachment_type: attachmentType,
+            attachment_metadata: attachmentMetadata
         })
         .select()
         .single();

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { uploadChatAttachment } from "@/lib/services/upload";
 import { getChatMessages, sendMessage, markMessagesAsRead, Message } from "@/lib/services/chat";
 import { AttachmentMenu, AttachmentType } from "./AttachmentMenu";
 import { MessageBubble } from "./MessageBubble";
@@ -21,12 +22,15 @@ export function ChatWindow({
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const supabase = createClient();
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Advanced Chat States
     const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState<AttachmentType | null>(null);
 
     // Initial Load & Auth
     useEffect(() => {
@@ -117,8 +121,47 @@ export function ChatWindow({
 
     const handleAttachmentSelect = (type: AttachmentType) => {
         setIsAttachmentMenuOpen(false);
-        console.log("Selected attachment:", type);
-        // TODO: Trigger actual file picker or logic based on type
+        setSelectedAttachmentType(type);
+
+        if (type === 'image' || type === 'document' || type === 'audio') {
+            if (fileInputRef.current) {
+                // Set accept types based on selection
+                if (type === 'image') fileInputRef.current.accept = "image/*";
+                if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                if (type === 'audio') fileInputRef.current.accept = "audio/*";
+                fileInputRef.current.click();
+            }
+        } else {
+            console.log("Selected attachment needs custom UI:", type);
+            // TODO: poll/location modals
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedAttachmentType) return;
+
+        setIsUploading(true);
+        try {
+            const { url, metadata } = await uploadChatAttachment(file);
+
+            // Send message with attachment
+            await sendMessage(
+                chatId,
+                "📎 " + (selectedAttachmentType.charAt(0).toUpperCase() + selectedAttachmentType.slice(1)),
+                replyingTo?.id,
+                url,
+                selectedAttachmentType,
+                metadata
+            );
+            setReplyingTo(null);
+        } catch (error) {
+            console.error("Failed to upload/send attachment:", error);
+            alert("Failed to send attachment");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
     };
 
     return (
@@ -169,6 +212,16 @@ export function ChatWindow({
                         );
                     })
                 )}
+
+                {isUploading && (
+                    <div className="flex items-center justify-end animate-fade-in-up">
+                        <div className="bg-purple-600/50 text-white rounded-2xl rounded-br-none px-4 py-2 text-sm flex items-center gap-2">
+                            <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span className="opacity-90">Uploading {selectedAttachmentType}...</span>
+                        </div>
+                    </div>
+                )}
+
                 <div ref={messagesEndRef} />
             </div>
 
@@ -197,6 +250,14 @@ export function ChatWindow({
                 isOpen={isAttachmentMenuOpen}
                 onClose={() => setIsAttachmentMenuOpen(false)}
                 onSelect={handleAttachmentSelect}
+            />
+
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
             />
 
             {/* Input */}
