@@ -139,3 +139,20 @@ export async function getChatMessages(chatId: string) {
         replied_to: Array.isArray(msg.replied_to) ? msg.replied_to[0] : msg.replied_to
     })) as Message[];
 }
+
+export async function markMessagesAsRead(chatId: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    // Mark all unread messages in this chat NOT sent by the current user as read
+    const { error } = await supabase
+        .from('chat_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('chat_id', chatId)
+        .neq('sender_hash', user.id)
+        .is('read_at', null);
+
+    if (error) console.error("Error marking messages as read:", error);
+}
