@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { Navbar } from "@/components/layout/Navbar";
-import { Bookmark, Edit3, MapPin, Heart, Settings, Grid3x3, BarChart3, Share2, LogOut, Zap, Eye, TrendingUp, Crown, Sparkles } from "lucide-react";
+import { Bookmark, Edit3, MapPin, Heart, Settings, Grid3x3, BarChart3, Share2, LogOut, Zap, Eye, TrendingUp, Crown, Sparkles, GraduationCap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -178,16 +178,19 @@ export default function ProfilePage() {
                             )}
                             <p className="text-[13px] text-zinc-500 flex items-center gap-1.5">
                                 <span className="text-rose-400 font-mono font-semibold">@{username}</span>
-                                <span className="text-zinc-700">•</span>
-                                <MapPin size={10} className="text-zinc-600" />
-                                <span>{college}</span>
                             </p>
                         </div>
 
-                        {/* Bio */}
-                        <p className="text-[13px] text-zinc-400 leading-relaxed mb-4 max-w-md">
-                            {bio}
-                        </p>
+                        {/* Bio & Affiliation */}
+                        <div className="space-y-2 mb-4">
+                            <div className="flex items-center gap-2 text-[12px] font-bold text-zinc-400">
+                                <GraduationCap size={14} className="text-red-500" />
+                                <span className="tracking-wide uppercase">{college}</span>
+                            </div>
+                            <p className="text-[13px] text-zinc-400 leading-relaxed max-w-md italic">
+                                "{bio}"
+                            </p>
+                        </div>
 
                         {/* Crush badge - always show if possible */}
                         <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold mb-4">
