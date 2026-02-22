@@ -15,7 +15,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { crushService } from "@/lib/services/crush";
 import { followService } from "@/lib/services/follow";
 import { achievementService, ACHIEVEMENTS, EarnedAchievement, AchievementDef } from "@/lib/services/achievements";
-import { recordProfileView, hasShadowAura } from "@/lib/services/user";
+import { recordProfileView, hasShadowAura, getProfileViews } from "@/lib/services/user";
 
 export default function ProfilePage() {
     const { showToast } = useToast();
@@ -33,6 +33,7 @@ export default function ProfilePage() {
     const [followingCount, setFollowingCount] = useState(0);
     const [earnedBadges, setEarnedBadges] = useState<(EarnedAchievement & AchievementDef)[]>([]);
     const [isShadowAuraActive, setIsShadowAuraActive] = useState(false);
+    const [profileViewsCount, setProfileViewsCount] = useState(0);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -56,16 +57,18 @@ export default function ProfilePage() {
     useEffect(() => {
         if (!userProfile?.id) return;
         async function fetchSocialCounts() {
-            const [crushes, followers, following, badges] = await Promise.all([
+            const [crushes, followers, following, badges, views] = await Promise.all([
                 crushService.getAdmirerCount(userProfile.id),
                 followService.getFollowerCount(userProfile.id),
                 followService.getFollowingCount(userProfile.id),
                 achievementService.getUserAchievements(userProfile.id),
+                getProfileViews(userProfile.id),
             ]);
             setCrushCount(crushes);
             setFollowerCount(followers);
             setFollowingCount(following);
             setEarnedBadges(badges);
+            setProfileViewsCount(views);
 
             // Check for Shadow Aura
             const hasAura = await hasShadowAura(userProfile.id, userProfile.college_name);
@@ -352,8 +355,8 @@ export default function ProfilePage() {
                                 <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                                     <Eye size={12} /> Profile Views
                                 </div>
-                                <div className="text-3xl font-black tracking-tight">—</div>
-                                <span className="text-[11px] text-zinc-600">Coming soon</span>
+                                <div className="text-3xl font-black tracking-tight">{profileViewsCount}</div>
+                                <span className="text-[11px] text-zinc-600">All-time peeks at your identity</span>
                             </div>
 
                             {/* Grid */}
@@ -364,26 +367,68 @@ export default function ProfilePage() {
                                 <MetricTile icon={<Sparkles size={14} />} label="Following" value={followingCount.toString()} />
                             </div>
 
-                            {/* Activity chart placeholder */}
+                            {/* Activity chart dynamic */}
                             <div className="rounded-xl bg-zinc-900/50 border border-white/[0.06] p-5">
                                 <div className="flex items-center justify-between mb-3">
                                     <span className="text-[13px] font-semibold text-zinc-300">Weekly Activity</span>
                                     <span className="text-[11px] text-zinc-600">Last 7 days</span>
                                 </div>
                                 <div className="flex items-end gap-[5px] h-16">
-                                    {[30, 55, 40, 75, 50, 90, 65].map((h, i) => (
-                                        <div key={i} className="flex-1">
-                                            <div
-                                                className="w-full rounded-sm bg-gradient-to-t from-red-500/50 to-red-500/10"
-                                                style={{ height: `${h}%` }}
-                                            />
-                                        </div>
-                                    ))}
+                                    {(() => {
+                                        // Calculate recent activity from posts array
+                                        const now = new Date();
+                                        const activity = [0, 0, 0, 0, 0, 0, 0];
+
+                                        posts.forEach(p => {
+                                            if (!p.created_at) return;
+                                            const d = new Date(p.created_at);
+                                            // Diff in days (0 is today)
+                                            const diffTime = now.getTime() - d.getTime();
+                                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                                            // Ensure within last 7 days
+                                            if (diffDays >= 0 && diffDays < 7) {
+                                                // Map to our 7-day array where index 6 is today
+                                                activity[6 - diffDays]++;
+                                            }
+                                        });
+
+                                        const max = Math.max(...activity, 1);
+                                        return activity.map((count, i) => {
+                                            const heightPercentage = Math.max((count / max) * 100, 5); // 5% minimum block
+                                            return (
+                                                <div key={i} className="flex-1 group relative flex flex-col justify-end h-full">
+                                                    <div
+                                                        className={`w-full rounded-sm transition-all duration-500 ${count > 0 ? 'bg-gradient-to-t from-red-500/80 to-red-500/10' : 'bg-white/5'}`}
+                                                        style={{ height: `${heightPercentage}%` }}
+                                                    />
+                                                    {count > 0 && (
+                                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-800 border border-white/10 text-white text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                                                            {count}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
                                 </div>
-                                <div className="flex mt-1">
-                                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                                        <span key={i} className="flex-1 text-center text-[9px] text-zinc-600">{d}</span>
-                                    ))}
+                                <div className="flex mt-2">
+                                    {(() => {
+                                        const daysMap = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+                                        const todayDayIndex = new Date().getDay();
+                                        const labels = [];
+
+                                        // Work backwards 7 days to today
+                                        for (let i = 6; i >= 0; i--) {
+                                            // (today - 6) % 7 etc.
+                                            const pastDayIndex = (todayDayIndex - i + 7) % 7;
+                                            labels.push(daysMap[pastDayIndex]);
+                                        }
+
+                                        return labels.map((d, i) => (
+                                            <span key={i} className={`flex-1 text-center text-[9px] font-mono ${i === 6 ? 'text-red-400 font-bold' : 'text-zinc-600'}`}>{d}</span>
+                                        ));
+                                    })()}
                                 </div>
                             </div>
                         </div>

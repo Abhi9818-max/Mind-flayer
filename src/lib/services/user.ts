@@ -114,6 +114,21 @@ export async function uploadAvatar(file: File, path: string) {
     return publicUrl;
 }
 
+export async function getProfileViews(userId: string): Promise<number> {
+    const supabase = createClient();
+    const { count, error } = await supabase
+        .from('profile_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('target_id', userId);
+
+    if (error) {
+        console.error("Error fetching profile views:", error);
+        return 0;
+    }
+
+    return count || 0;
+}
+
 /**
  * The Peek: Record a profile view and notify the target.
  */

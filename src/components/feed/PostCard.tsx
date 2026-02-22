@@ -31,13 +31,13 @@ interface Post {
     hasSaved?: boolean;
 }
 
-const typeStyles: Record<PostType | 'voice', { text: string }> = {
-    confession: { text: 'text-red-400' },
-    rumor: { text: 'text-amber-400' },
-    crush: { text: 'text-rose-400' },
-    rant: { text: 'text-orange-400' },
-    question: { text: 'text-zinc-300' },
-    voice: { text: 'text-purple-400' },
+const typeStyles: Record<PostType | 'voice', { text: string; glow: string; border: string }> = {
+    confession: { text: 'text-red-400', glow: 'from-red-500/10 via-black/0', border: 'border-red-500/20 group-hover:border-red-500/40' },
+    rumor: { text: 'text-amber-400', glow: 'from-amber-500/10 via-black/0', border: 'border-amber-500/20 group-hover:border-amber-500/40' },
+    crush: { text: 'text-rose-400', glow: 'from-rose-500/10 via-black/0', border: 'border-rose-500/20 group-hover:border-rose-500/40' },
+    rant: { text: 'text-orange-400', glow: 'from-orange-500/10 via-black/0', border: 'border-orange-500/20 group-hover:border-orange-500/40' },
+    question: { text: 'text-zinc-300', glow: 'from-white/5 via-black/0', border: 'border-white/10 group-hover:border-white/20' },
+    voice: { text: 'text-purple-400', glow: 'from-purple-500/10 via-black/0', border: 'border-purple-500/20 group-hover:border-purple-500/40' },
 };
 
 import { useToast } from "@/lib/context/ToastContext";
@@ -237,13 +237,13 @@ export function PostCard({
                 scale-100 opacity-0 translate-y-4 z-10
                 hover:-translate-y-0.5
                 active:scale-[0.998] active:duration-150
-                bg-[#0a0a0a]/60 backdrop-blur-2xl
-                shadow-[0_8px_30px_rgb(0,0,0,0.12)]
-                ring-1 ring-white/[0.05] hover:ring-white/[0.08]
+                bg-black/80 backdrop-blur-3xl
+                shadow-[0_8px_30px_rgb(0,0,0,0.4)]
+                border ${styles.border} transition-colors duration-500
                 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
                 group relative overflow-hidden rounded-[24px]
             `}
-            spotlightColor="rgba(255, 255, 255, 0.03)"
+            spotlightColor="rgba(255, 255, 255, 0.05)"
             style={{
                 animationDelay: `${delay}ms`,
                 animationFillMode: 'forwards',
@@ -276,7 +276,10 @@ export function PostCard({
             )}
 
 
-            {/* Subtle ambient glow on hover */}
+            {/* Subtle ambient glow on hover & Noise Texture */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} opacity-50 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0`} />
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent transition-opacity duration-700 opacity-0 group-hover:opacity-100 pointer-events-none rounded-[24px]" />
             <div className="absolute -inset-px rounded-[24px] bg-gradient-to-b from-white/[0.04] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
 
@@ -420,8 +423,8 @@ export function PostCard({
                 ) : null}
 
                 {post.content && (
-                    <div className="relative z-10 p-4 mt-2 rounded-[16px] bg-white/[0.015] border border-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-                        <p className="text-[#d4d4d8] leading-[1.8] font-light text-[15px] tracking-[0.015em] whitespace-pre-wrap">
+                    <div className="relative z-10 p-5 mt-3 rounded-[16px] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm group-hover:border-white/[0.08] transition-colors duration-500">
+                        <p className="text-white leading-[1.7] font-medium text-[16px] sm:text-[17px] tracking-tight whitespace-pre-wrap drop-shadow-sm">
                             {post.content}
                         </p>
                     </div>
