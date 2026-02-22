@@ -272,8 +272,6 @@ export function PostCard({
                 </div>
             )}
 
-            {/* Top accent line */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] opacity-40" style={{ background: `linear-gradient(90deg, transparent, ${typeColor.primary}, transparent)` }} />
 
             {/* Subtle ambient glow on hover */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent transition-opacity duration-700 opacity-0 group-hover:opacity-100 pointer-events-none rounded-2xl" />
