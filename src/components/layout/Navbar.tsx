@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
-import { Home, Radio, Compass, MessageCircle, Bell, User as UserIcon, LogOut } from "lucide-react";
+import { Home, Radio, Compass, MessageCircle, Bell, User as UserIcon, LogOut, Skull } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 
 export function Navbar() {
@@ -70,6 +70,7 @@ export function Navbar() {
                 <nav className="hidden md:flex items-center gap-1">
                     <NavItem href="/feed" icon={<Home size={20} />} label="Feed" active={pathname === "/feed"} />
                     <NavItem href="/rooms" icon={<Radio size={20} />} label="Rooms" active={pathname === "/rooms"} />
+                    <NavItem href="/dying-room" icon={<Skull size={20} />} label="Dying Room" active={pathname === "/dying-room"} special />
                     <NavItem href="/explore" icon={<Compass size={20} />} label="Explore" active={pathname === "/explore"} />
                     <NavItem href="/messages" icon={<MessageCircle size={20} />} label="Messages" badge={3} active={pathname.startsWith("/messages")} />
                 </nav>
@@ -140,20 +141,22 @@ function NavItem({
     icon,
     label,
     active,
-    badge
+    badge,
+    special
 }: {
     href: string;
     icon: React.ReactNode;
     label: string;
     active?: boolean;
     badge?: number;
+    special?: boolean;
 }) {
     return (
         <Link
             href={href}
             className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${active
-                ? 'text-black bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                ? special ? 'text-red-400 bg-red-950/40 shadow-[0_0_15px_rgba(220,38,38,0.3)]' : 'text-black bg-white shadow-[0_0_15px_rgba(255,255,255,0.4)]'
+                : special ? 'text-red-800 hover:text-red-400 hover:bg-red-950/20' : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
         >
             {icon}
