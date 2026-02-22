@@ -27,5 +27,4 @@ CREATE POLICY "Users can post to dying room"
     ON dying_room_messages FOR INSERT
     WITH CHECK (auth.uid() = author_id);
 
--- Enable realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE dying_room_messages;
+-- Realtime is already enabled globally (FOR ALL TABLES)
