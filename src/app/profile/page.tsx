@@ -15,6 +15,7 @@ import { useToast } from "@/lib/context/ToastContext";
 import { crushService } from "@/lib/services/crush";
 import { followService } from "@/lib/services/follow";
 import { achievementService, ACHIEVEMENTS, EarnedAchievement, AchievementDef } from "@/lib/services/achievements";
+import { recordProfileView, hasShadowAura } from "@/lib/services/user";
 
 export default function ProfilePage() {
     const { showToast } = useToast();
@@ -31,6 +32,7 @@ export default function ProfilePage() {
     const [followerCount, setFollowerCount] = useState(0);
     const [followingCount, setFollowingCount] = useState(0);
     const [earnedBadges, setEarnedBadges] = useState<(EarnedAchievement & AchievementDef)[]>([]);
+    const [isShadowAuraActive, setIsShadowAuraActive] = useState(false);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -64,9 +66,29 @@ export default function ProfilePage() {
             setFollowerCount(followers);
             setFollowingCount(following);
             setEarnedBadges(badges);
+
+            // Check for Shadow Aura
+            const hasAura = await hasShadowAura(userProfile.id, userProfile.college_name);
+            setIsShadowAuraActive(hasAura);
         }
         fetchSocialCounts();
     }, [userProfile]);
+
+    // Record Profile View (The Peek)
+    useEffect(() => {
+        if (!userProfile?.id) return;
+
+        async function recordView() {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+
+            // Only record if viewing SOMONE ELSE'S profile
+            if (user && user.id !== userProfile.id) {
+                await recordProfileView(userProfile.id, userProfile.college_name);
+            }
+        }
+        recordView();
+    }, [userProfile?.id]);
 
     useEffect(() => {
         async function fetchUserFeed() {
@@ -152,7 +174,16 @@ export default function ProfilePage() {
                                 className="relative w-20 h-20 md:w-24 md:h-24 rounded-full shrink-0 cursor-pointer group"
                                 onClick={() => setIsEditProfileOpen(true)}
                             >
-                                <div className="absolute -inset-[2px] rounded-full bg-gradient-to-tr from-red-500 via-rose-500 to-amber-500 opacity-80" />
+                                {/* Shadow Aura Effect */}
+                                {isShadowAuraActive && (
+                                    <>
+                                        <div className="absolute -inset-4 rounded-full bg-black/40 blur-2xl animate-pulse z-0" />
+                                        <div className="absolute -inset-2 rounded-full border-2 border-red-900/40 animate-spin-slow z-0" />
+                                        <div className="absolute -inset-1 rounded-full bg-gradient-to-t from-red-600/20 via-transparent to-red-600/20 animate-pulse z-0" />
+                                    </>
+                                )}
+
+                                <div className={`absolute -inset-[2px] rounded-full opacity-80 z-0 ${isShadowAuraActive ? 'bg-gradient-to-tr from-red-900 via-zinc-900 to-red-900 shadow-[0_0_20px_rgba(220,38,38,0.3)]' : 'bg-gradient-to-tr from-red-500 via-rose-500 to-amber-500'}`} />
                                 <div className="relative w-full h-full rounded-full bg-[#111] border-[2px] border-[#030303] flex items-center justify-center overflow-hidden z-10 group-hover:scale-105 transition-transform">
                                     {userProfile?.avatar_url ? (
                                         <img src={userProfile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -178,7 +209,17 @@ export default function ProfilePage() {
                             {loading ? (
                                 <div className="h-5 w-36 bg-white/5 rounded-lg animate-pulse mb-2" />
                             ) : (
-                                <h1 className="text-lg font-bold leading-tight">{displayName}</h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-lg font-bold leading-tight">{displayName}</h1>
+                                    {isShadowAuraActive && (
+                                        <div className="group relative">
+                                            <Crown size={14} className="text-red-500 animate-pulse" />
+                                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 border border-red-500/30 rounded text-[9px] font-bold text-red-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                                                SHADOW SOVEREIGN (TOP 5%)
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                             <p className="text-[13px] text-zinc-500 flex items-center gap-1.5">
                                 <span className="text-rose-400 font-mono font-semibold">@{username}</span>

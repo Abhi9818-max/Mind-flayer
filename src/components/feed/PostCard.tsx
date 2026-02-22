@@ -18,6 +18,7 @@ interface Post {
     comment_count: number;
     created_at: string;
     author_id?: string;
+    author_shadow_aura?: boolean;
     author?: {
         display_name?: string;
         void_name?: string;
@@ -42,7 +43,7 @@ const typeStyles: Record<PostType | 'voice', { badge: string; border: string }> 
 import { useToast } from "@/lib/context/ToastContext";
 import { toggleLike, toggleSave } from "@/lib/services/interactions";
 import { crushService } from "@/lib/services/crush";
-import { Sparkles, Heart } from "lucide-react";
+import { Sparkles, Heart, Crown } from "lucide-react";
 
 export function PostCard({
     post,
@@ -322,22 +323,36 @@ export function PostCard({
                         </>
                     ) : (
                         <>
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-rose-600 flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-md shadow-red-900/20 group-hover/id:scale-110 transition-transform overflow-hidden relative">
-                                {post.author?.avatar_url ? (
-                                    <img
-                                        src={post.author.avatar_url}
-                                        alt={post.author.display_name || "User"}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    (post.author?.display_name || "U")[0]
+                            <div className="relative">
+                                {/* Shadow Aura Effect for PostCard */}
+                                {post.author_shadow_aura && (
+                                    <>
+                                        <div className="absolute -inset-1.5 rounded-full bg-red-600/20 blur-sm animate-pulse z-0" />
+                                        <div className="absolute -inset-1 rounded-full border border-red-900/40 animate-spin-slow z-0" />
+                                    </>
                                 )}
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-md overflow-hidden relative z-10 group-hover/id:scale-110 transition-transform ${post.author_shadow_aura ? 'bg-gradient-to-br from-red-900 via-red-800 to-black shadow-red-900/40' : 'bg-gradient-to-br from-red-600 to-rose-600 shadow-red-900/20'}`}>
+                                    {post.author?.avatar_url ? (
+                                        <img
+                                            src={post.author.avatar_url}
+                                            alt={post.author.display_name || "User"}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        (post.author?.display_name || "U")[0]
+                                    )}
+                                </div>
                             </div>
                             <div className="text-left">
-                                <span className="block text-sm font-bold text-zinc-200 group-hover/id:text-white transition-colors tracking-wide">
-                                    {post.author?.display_name || "User"}
-                                </span>
-                                <span className="block text-[10px] text-zinc-600 font-mono uppercase tracking-wider">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="block text-sm font-bold text-zinc-200 group-hover/id:text-white transition-colors tracking-wide line-clamp-1">
+                                        {post.author?.display_name || "User"}
+                                    </span>
+                                    {post.author_shadow_aura && (
+                                        <Crown size={10} className="text-red-500 animate-pulse" />
+                                    )}
+                                </div>
+                                <span className="block text-[10px] text-zinc-600 font-mono uppercase tracking-wider line-clamp-1">
                                     {post.author?.username ? `@${post.author.username}` : 'Real Identity'}
                                 </span>
                             </div>

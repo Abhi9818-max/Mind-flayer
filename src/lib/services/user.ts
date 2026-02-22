@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { createNotification } from './notifications';
 
 export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'unverified';
 
@@ -111,4 +112,93 @@ export async function uploadAvatar(file: File, path: string) {
         .getPublicUrl(path);
 
     return publicUrl;
+}
+
+/**
+ * The Peek: Record a profile view and notify the target.
+ */
+export async function recordProfileView(targetId: string, targetCollege?: string) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user || user.id === targetId) return;
+
+    // Record the view
+    const { error: viewError } = await supabase
+        .from('profile_views')
+        .insert({
+            viewer_id: user.id,
+            target_id: targetId
+        });
+
+    if (viewError) {
+        console.error("Error recording profile view:", viewError);
+        return;
+    }
+
+    // Get viewer's college to make the notification mysterious
+    let viewerCollege = "The Void";
+    const { data: viewerProfile } = await supabase
+        .from('user_profiles')
+        .select('college_name')
+        .eq('id', user.id)
+        .single();
+
+    if (viewerProfile?.college_name) {
+        viewerCollege = viewerProfile.college_name;
+    }
+
+    // Create the "Peek" notification
+    await createNotification(
+        targetId,
+        'system',
+        `👁️ Someone from ${viewerCollege} is watching your profile...`,
+        user.id // Reference to viewer profile if they want to click it (optional)
+    );
+}
+
+/**
+ * Shadow Aura: Check if a user is in the top 5% of their college by crush count.
+ */
+export async function hasShadowAura(userId: string, collegeName?: string): Promise<boolean> {
+    const supabase = createClient();
+
+    // If no college provided, fetch it
+    let targetCollege = collegeName;
+    if (!targetCollege) {
+        const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('college_name')
+            .eq('id', userId)
+            .single();
+        targetCollege = profile?.college_name;
+    }
+
+    if (!targetCollege) return false;
+
+    // Logic:
+    // 1. Get crash counts for all users in this college
+    // 2. See if the target user's count is in the top 5%
+
+    // This is an expensive query for real-time. 
+    // Optimization: For now, we'll check if they have at least 10 crushes AND are in the top 5% of users with at least 1 crush.
+
+    const { data: rankings, error } = await supabase
+        .rpc('get_college_crush_rankings', { target_college: targetCollege });
+
+    if (error || !rankings) {
+        // Fallback: If no RPC exists, just check for a high minimum (e.g., 20 crushes)
+        const { count } = await supabase
+            .from('user_crushes')
+            .select('*', { count: 'exact', head: true })
+            .eq('target_id', userId);
+
+        return (count || 0) >= 20;
+    }
+
+    const userRank = rankings.find((r: any) => r.user_id === userId);
+    if (!userRank) return false;
+
+    const percentile = (userRank.rank / rankings.length);
+    return percentile <= 0.05; // Top 5%
 }

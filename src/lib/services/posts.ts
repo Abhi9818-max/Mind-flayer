@@ -98,7 +98,7 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
     }
 
     // Process the data to ensure correct structure
-    const processedPosts = data.map((post: any) => {
+    const processedPosts = await Promise.all(data.map(async (post: any) => {
         // If it's a real user post but the joined data is an array
         const authorData = Array.isArray(post.author) ? post.author[0] : post.author;
 
@@ -106,10 +106,18 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
         const realLikeCount = post.likes?.[0]?.count ?? post.like_count ?? 0;
         const realCommentCount = post.comments?.[0]?.count ?? post.comment_count ?? 0;
 
+        // Shadow Aura check (optimized: only for non-anonymous authors)
+        let auraActive = false;
+        if (!post.is_anonymous && post.user_id) {
+            const { hasShadowAura } = await import('./user');
+            auraActive = await hasShadowAura(post.user_id, authorData?.college_name);
+        }
+
         return {
             ...post,
             like_count: realLikeCount,
             comment_count: realCommentCount,
+            author_shadow_aura: auraActive,
             // If anonymous, we still want to use the profile's 'void' details if it exists
             author: post.is_anonymous
                 ? {
@@ -127,7 +135,7 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
             // Clean up joined aggregation data
             likes: undefined,
         };
-    });
+    }));
 
     return processedPosts;
 }
