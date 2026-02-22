@@ -31,13 +31,13 @@ interface Post {
     hasSaved?: boolean;
 }
 
-const typeStyles: Record<PostType | 'voice', { text: string; glow: string; border: string }> = {
-    confession: { text: 'text-red-400', glow: 'from-red-500/10 via-black/0', border: 'border-red-500/20 group-hover:border-red-500/40' },
-    rumor: { text: 'text-amber-400', glow: 'from-amber-500/10 via-black/0', border: 'border-amber-500/20 group-hover:border-amber-500/40' },
-    crush: { text: 'text-rose-400', glow: 'from-rose-500/10 via-black/0', border: 'border-rose-500/20 group-hover:border-rose-500/40' },
-    rant: { text: 'text-orange-400', glow: 'from-orange-500/10 via-black/0', border: 'border-orange-500/20 group-hover:border-orange-500/40' },
-    question: { text: 'text-zinc-300', glow: 'from-white/5 via-black/0', border: 'border-white/10 group-hover:border-white/20' },
-    voice: { text: 'text-purple-400', glow: 'from-purple-500/10 via-black/0', border: 'border-purple-500/20 group-hover:border-purple-500/40' },
+const typeStyles: Record<PostType | 'voice', { text: string }> = {
+    confession: { text: 'text-red-400' },
+    rumor: { text: 'text-amber-400' },
+    crush: { text: 'text-rose-400' },
+    rant: { text: 'text-orange-400' },
+    question: { text: 'text-zinc-300' },
+    voice: { text: 'text-purple-400' },
 };
 
 import { useToast } from "@/lib/context/ToastContext";
@@ -233,17 +233,17 @@ export function PostCard({
     return (
         <SpotlightCard
             className={`
-                p-5 sm:p-6 transition-all duration-500 ease-out animate-fade-in-up
+                p-6 sm:p-8 transition-transform duration-500 ease-out animate-fade-in-up
                 scale-100 opacity-0 translate-y-4 z-10
                 hover:-translate-y-0.5
                 active:scale-[0.998] active:duration-150
-                bg-black/80 backdrop-blur-3xl
-                shadow-[0_8px_30px_rgb(0,0,0,0.4)]
-                border ${styles.border} transition-colors duration-500
-                shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]
-                group relative overflow-hidden rounded-[24px]
+                bg-[#0c0c0c] 
+                border border-white/[0.06] hover:border-white/[0.1]
+                rounded-[32px] 
+                shadow-[0_8px_40px_rgba(0,0,0,0.6)]
+                group relative overflow-hidden
             `}
-            spotlightColor="rgba(255, 255, 255, 0.05)"
+            spotlightColor="rgba(255, 255, 255, 0.03)"
             style={{
                 animationDelay: `${delay}ms`,
                 animationFillMode: 'forwards',
@@ -275,13 +275,8 @@ export function PostCard({
                 </div>
             )}
 
-
-            {/* Subtle ambient glow on hover & Noise Texture */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${styles.glow} opacity-50 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0`} />
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
-
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.01] to-transparent transition-opacity duration-700 opacity-0 group-hover:opacity-100 pointer-events-none rounded-[24px]" />
-            <div className="absolute -inset-px rounded-[24px] bg-gradient-to-b from-white/[0.04] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none" />
+            {/* Ultra-subtle hover highlight */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 pointer-events-none rounded-[32px]" />
 
             {/* Moderation Overlay: Quarantined */}
             {post.moderation_status === 'quarantined' ? (
@@ -307,20 +302,19 @@ export function PostCard({
                 >
                     {post.is_anonymous ? (
                         <>
-                            <div className="w-9 h-9 rounded-full bg-zinc-900/90 flex items-center justify-center ring-1 ring-white/10 group-hover/id:ring-white/20 transition-all duration-500 shadow-inner overflow-hidden relative">
-                                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-50" />
+                            <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center ring-1 ring-white/10 overflow-hidden relative">
                                 {post.author?.void_avatar ? (
                                     <img
                                         src={post.author.void_avatar}
                                         alt="Void Identity"
-                                        className="w-full h-full object-cover relative z-10 brightness-90 group-hover/id:brightness-110 transition-all duration-500"
+                                        className="w-full h-full object-cover relative z-10"
                                     />
                                 ) : (
-                                    <span className="text-sm relative z-10">🌑</span>
+                                    <span className="text-[15px] relative z-10">🌑</span>
                                 )}
                             </div>
                             <div className="text-left flex flex-col justify-center">
-                                <span className="block text-[14px] font-semibold text-white/90 group-hover/id:text-white transition-colors tracking-tight">
+                                <span className="block text-[15px] font-medium text-white transition-colors tracking-tight">
                                     {post.author?.void_name || "Anonymous"}
                                 </span>
                                 <span className="block text-[11px] text-zinc-500 font-medium tracking-wide mt-0.5">
@@ -331,29 +325,21 @@ export function PostCard({
                     ) : (
                         <>
                             <div className="relative">
-                                {/* Shadow Aura Effect for PostCard */}
-                                {post.author_shadow_aura && (
-                                    <>
-                                        <div className="absolute -inset-2 rounded-full bg-red-600/10 blur-md animate-pulse z-0" />
-                                        <div className="absolute -inset-1 rounded-full border border-red-500/20 blur-[1px] z-0" />
-                                    </>
-                                )}
-                                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[10px] font-mono font-bold text-white shadow-inner overflow-hidden relative z-10 group-hover/id:scale-105 transition-all duration-500 ${post.author_shadow_aura ? 'bg-gradient-to-br from-red-950 via-red-900 to-black ring-1 ring-red-500/30' : 'bg-zinc-900/90 ring-1 ring-white/10 group-hover/id:ring-white/20'}`}>
-                                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-50" />
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-medium text-white overflow-hidden relative z-10 ${post.author_shadow_aura ? 'ring-2 ring-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-zinc-800 ring-1 ring-white/10'}`}>
                                     {post.author?.avatar_url ? (
                                         <img
                                             src={post.author.avatar_url}
                                             alt={post.author.display_name || "User"}
-                                            className="w-full h-full object-cover relative z-10 brightness-90 group-hover/id:brightness-110 transition-all duration-500"
+                                            className="w-full h-full object-cover relative z-10"
                                         />
                                     ) : (
-                                        <span className="relative z-10">{(post.author?.display_name || "U")[0]}</span>
+                                        <span className="relative z-10 opacity-70">{(post.author?.display_name || "U")[0]}</span>
                                     )}
                                 </div>
                             </div>
                             <div className="text-left flex flex-col justify-center">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="block text-[14px] font-semibold text-white/90 group-hover/id:text-white transition-colors tracking-tight line-clamp-1">
+                                    <span className="block text-[15px] font-medium text-white transition-colors tracking-tight line-clamp-1">
                                         {post.author?.display_name || "User"}
                                     </span>
                                     {post.author_shadow_aura && (
@@ -381,11 +367,10 @@ export function PostCard({
 
                         <div className={`
                             inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-                            bg-white/[0.03] border border-white/[0.08] backdrop-blur-md shadow-inner
-                            transition-all duration-500 group-hover:bg-white/[0.05] group-hover:border-white/[0.12]
+                            bg-zinc-900/50 border border-white/[0.04]
                         `}>
-                            <span className="text-[12px] opacity-80">{config.icon}</span>
-                            <span className={`text-[10px] font-medium tracking-wide uppercase ${styles.text}`}>
+                            <span className="text-[12px] opacity-70">{config.icon}</span>
+                            <span className={`text-[11px] font-medium tracking-wide ${styles.text}`}>
                                 {config.label}
                             </span>
                         </div>
@@ -423,8 +408,8 @@ export function PostCard({
                 ) : null}
 
                 {post.content && (
-                    <div className="relative z-10 p-5 mt-3 rounded-[16px] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.05] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm group-hover:border-white/[0.08] transition-colors duration-500">
-                        <p className="text-white leading-[1.7] font-medium text-[16px] sm:text-[17px] tracking-tight whitespace-pre-wrap drop-shadow-sm">
+                    <div className="relative z-10 mt-1">
+                        <p className="text-zinc-200 leading-relaxed font-normal text-[16px] whitespace-pre-wrap">
                             {post.content}
                         </p>
                     </div>
@@ -501,31 +486,25 @@ export function PostCard({
 
                 {/* Primary Action: Connect / Crush — hidden for own posts */}
                 {!isOwnPost && (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                         <button
                             onClick={handleCrushClick}
                             disabled={isCrushing || hasCrushed}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all duration-500 active:scale-95 group/btn
+                            className={`flex items-center justify-center w-8 h-8 rounded-full border transition-all active:scale-95 group/btn
                                 ${hasCrushed
-                                    ? 'bg-pink-500/10 border-pink-500/30 text-pink-400 shadow-[inset_0_1px_0_rgba(236,72,153,0.1)]'
-                                    : 'bg-transparent border-white/[0.08] hover:bg-pink-500/5 hover:border-pink-500/20 text-zinc-400 hover:text-pink-300'
+                                    ? 'bg-pink-500/10 border-pink-500/30'
+                                    : 'bg-transparent border-white/[0.06] hover:bg-pink-500/5 hover:border-pink-500/20 text-zinc-400 hover:text-pink-300'
                                 }`}
+                            aria-label="Mark as Crush"
                         >
-                            <Sparkles size={12} className={`transition-all duration-500 ${hasCrushed ? "fill-pink-400 drop-shadow-[0_0_8px_rgba(244,114,182,0.6)]" : "group-hover/btn:animate-pulse"}`} />
-                            <span className="text-[10px] font-semibold uppercase tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-rose-300">
-                                {hasCrushed ? 'Crushed' : 'Crush'}
-                            </span>
+                            <Sparkles size={14} className={`transition-all ${hasCrushed ? "fill-pink-400 text-pink-400" : "group-hover/btn:animate-pulse"}`} />
                         </button>
 
                         <button
                             onClick={onChatClick}
-                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.15] active:scale-95 group/btn transition-all duration-500 shadow-inner"
+                            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-black font-semibold text-[13px] tracking-tight hover:bg-zinc-200 active:scale-95 transition-all"
                         >
-                            <span className="text-zinc-300 group-hover/btn:text-white font-medium text-[11px] tracking-wide uppercase transition-colors">Connect</span>
-                            <svg className="w-3.5 h-3.5 text-zinc-500 group-hover/btn:text-white transition-all duration-500 group-hover/btn:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M5 12h14" />
-                                <path d="m12 5 7 7-7 7" />
-                            </svg>
+                            Connect
                         </button>
                     </div>
                 )}
