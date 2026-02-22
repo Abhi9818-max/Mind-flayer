@@ -399,6 +399,12 @@ export function PostCard({
 
             {/* Content w/ optional blur for Under Review */}
             <div className={`mb-4 relative z-10 ${post.moderation_status === 'under_review' ? 'blur-sm select-none opacity-50 grayscale transition-all duration-300 hover:blur-none hover:opacity-100' : ''}`}>
+
+                {/* Subtle Background Watermark */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] opacity-[0.015] pointer-events-none select-none saturate-0 pointer-events-none z-0">
+                    {config.icon}
+                </div>
+
                 {post.moderation_status === 'under_review' && (
                     <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                         <span className="bg-black/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-[10px] font-semibold text-zinc-400 uppercase tracking-widest border border-white/10">
@@ -408,15 +414,17 @@ export function PostCard({
                 )}
 
                 {post.type === 'voice' && post.media_url ? (
-                    <div className="mb-4">
+                    <div className="mb-4 relative z-10">
                         <AudioPlayer src={post.media_url} />
                     </div>
                 ) : null}
 
                 {post.content && (
-                    <p className="text-[#d4d4d8] leading-[1.8] font-light text-[15px] tracking-[0.015em]">
-                        {post.content}
-                    </p>
+                    <div className="relative z-10 p-4 mt-2 rounded-[16px] bg-white/[0.015] border border-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                        <p className="text-[#d4d4d8] leading-[1.8] font-light text-[15px] tracking-[0.015em] whitespace-pre-wrap">
+                            {post.content}
+                        </p>
+                    </div>
                 )}
             </div>
 
