@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { UIProvider } from "@/lib/context/UIContext";
 import { ToastProvider } from "@/lib/context/ToastContext";
+import { UnreadProvider } from "@/lib/context/UnreadContext";
 import { ToastContainer } from "@/components/ui/ToastContainer";
 import { AccountStatusBanner } from "@/components/layout/AccountStatusBanner";
 import { AdaptiveUIDebug } from "@/components/debug/AdaptiveUIDebug";
@@ -43,11 +44,13 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <UIProvider>
           <ToastProvider>
-            <AccountStatusBanner />
-            {children}
-            <Analytics />
-            <ToastContainer />
-            <AdaptiveUIDebug />
+            <UnreadProvider>
+              <AccountStatusBanner />
+              {children}
+              <Analytics />
+              <ToastContainer />
+              <AdaptiveUIDebug />
+            </UnreadProvider>
           </ToastProvider>
         </UIProvider>
         <script

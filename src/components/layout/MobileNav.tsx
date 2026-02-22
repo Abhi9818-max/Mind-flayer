@@ -4,15 +4,17 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Home, Globe, Bell, User, Plus, MessageCircle, Radio } from "lucide-react";
 import { useAdaptiveLayout } from "@/lib/hooks/useAdaptiveLayout";
+import { useUnread } from "@/lib/context/UnreadContext";
 
 export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
     const pathname = usePathname();
+    const { counts } = useUnread();
 
     // Define nav items in standard exact order
     const navItems = [
         { href: "/feed", icon: <Home size={24} />, label: "Feed" },
         { href: "/explore", icon: <Globe size={24} />, label: "Explore" },
-        { href: "/messages", icon: <MessageCircle size={24} />, label: "Messages" },
+        { href: "/messages", icon: <MessageCircle size={24} />, label: "Messages", badge: counts.messages > 0 ? (counts.messages > 9 ? "9+" : counts.messages.toString()) : undefined },
         { href: "/profile", icon: <User size={24} />, label: "Profile" },
     ];
 
@@ -29,6 +31,7 @@ export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
                         href={item.href}
                         icon={item.icon}
                         active={pathname === item.href || (item.href === "/messages" && pathname.startsWith("/messages/"))}
+                        badge={item.badge}
                     />
                 ))}
 
@@ -48,6 +51,7 @@ export function MobileNav({ onComposeClick }: { onComposeClick?: () => void }) {
                         href={item.href}
                         icon={item.icon}
                         active={pathname === item.href || (item.href === "/messages" && pathname.startsWith("/messages/"))}
+                        badge={item.badge}
                     />
                 ))}
             </div>
@@ -67,7 +71,7 @@ function MobileNavLink({ href, icon, active = false, badge }: { href: string; ic
             <div className="relative">
                 {icon}
                 {badge && (
-                    <span className="absolute -top-1 -right-1 bg-white text-black text-[9px] font-bold h-3.5 w-3.5 flex items-center justify-center rounded-full">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold h-3.5 min-w-[14px] flex items-center justify-center rounded-full px-0.5 ring-2 ring-black">
                         {badge}
                     </span>
                 )}

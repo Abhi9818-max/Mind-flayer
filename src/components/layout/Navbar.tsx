@@ -7,12 +7,14 @@ import { useEffect, useState } from "react";
 import { User } from "@supabase/supabase-js";
 import { Home, Radio, Compass, MessageCircle, Bell, User as UserIcon, LogOut, Skull } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { useUnread } from "@/lib/context/UnreadContext";
 
 export function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const { counts } = useUnread();
 
     const isHomePage = pathname === "/";
 
@@ -72,7 +74,7 @@ export function Navbar() {
                     <NavItem href="/rooms" icon={<Radio size={20} />} label="Rooms" active={pathname === "/rooms"} />
                     <NavItem href="/dying-room" icon={<Skull size={20} />} label="Dying Room" active={pathname === "/dying-room"} special />
                     <NavItem href="/explore" icon={<Compass size={20} />} label="Explore" active={pathname === "/explore"} />
-                    <NavItem href="/messages" icon={<MessageCircle size={20} />} label="Messages" badge={3} active={pathname.startsWith("/messages")} />
+                    <NavItem href="/messages" icon={<MessageCircle size={20} />} label="Messages" badge={counts.messages > 0 ? counts.messages : undefined} active={pathname.startsWith("/messages")} />
                 </nav>
 
                 {/* Right Actions */}
@@ -95,7 +97,11 @@ export function Navbar() {
                                 className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
                             >
                                 <Bell size={20} />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-black" />
+                                {counts.notifications > 0 && (
+                                    <span className="absolute top-1 right-1 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full ring-2 ring-black">
+                                        {counts.notifications > 9 ? '9+' : counts.notifications}
+                                    </span>
+                                )}
                             </Link>
 
                             {/* Profile Dropdown (Hidden on Mobile) */}
