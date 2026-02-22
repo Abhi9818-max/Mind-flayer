@@ -21,6 +21,8 @@ import { ComposeModal } from "@/components/compose/ComposeModal";
 import { EmptyFeed } from "@/components/ui/EmptyState";
 import { VerificationBanner } from "@/components/layout/VerificationBanner";
 import { useToast } from "@/lib/context/ToastContext";
+import { achievementService, EarnedAchievement, AchievementDef } from "@/lib/services/achievements";
+import { AchievementCelebration } from "@/components/ui/AchievementCelebration";
 
 const NCR_DOMINION_ID = "660e8400-e29b-41d4-a716-446655440000";
 
@@ -36,6 +38,8 @@ function FeedContent() {
     const [posts, setPosts] = useState<any[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [unseenAchievements, setUnseenAchievements] = useState<(EarnedAchievement & AchievementDef)[]>([]);
+    const [showCelebration, setShowCelebration] = useState(false);
 
     const handleFilterClick = (type: PostType | "all") => {
         if (type === "all") {
@@ -51,15 +55,29 @@ function FeedContent() {
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [activeChatRecipient, setActiveChatRecipient] = useState<string | null>(null);
 
-    // Get current user ID
+    // Get current user ID & check achievements
     useEffect(() => {
-        async function fetchUserId() {
+        async function fetchUserAndAchievements() {
             const { createClient } = await import("@/lib/supabase/client");
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            if (user) setCurrentUserId(user.id);
+            if (user) {
+                setCurrentUserId(user.id);
+
+                // Check & award new achievements silently
+                try {
+                    await achievementService.checkAndAward(user.id);
+                    const unseen = await achievementService.getUnseen(user.id);
+                    if (unseen.length > 0) {
+                        setUnseenAchievements(unseen);
+                        setShowCelebration(true);
+                    }
+                } catch (e) {
+                    console.error('Achievement check failed:', e);
+                }
+            }
         }
-        fetchUserId();
+        fetchUserAndAchievements();
     }, []);
 
     // Fetch Posts from Supabase
@@ -265,6 +283,17 @@ function FeedContent() {
                     chatId={activeChatId}
                     recipientName={activeChatRecipient || "Anonymous"}
                     onClose={() => setActiveChatId(null)}
+                />
+            )}
+
+            {/* Achievement Celebration */}
+            {showCelebration && unseenAchievements.length > 0 && (
+                <AchievementCelebration
+                    achievements={unseenAchievements}
+                    onComplete={() => {
+                        setShowCelebration(false);
+                        setUnseenAchievements([]);
+                    }}
                 />
             )}
         </div>

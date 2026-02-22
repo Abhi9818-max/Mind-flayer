@@ -14,6 +14,7 @@ import { getUserInteractions, getSavedPosts } from "@/lib/services/interactions"
 import { useToast } from "@/lib/context/ToastContext";
 import { crushService } from "@/lib/services/crush";
 import { followService } from "@/lib/services/follow";
+import { achievementService, ACHIEVEMENTS, EarnedAchievement, AchievementDef } from "@/lib/services/achievements";
 
 export default function ProfilePage() {
     const { showToast } = useToast();
@@ -29,6 +30,7 @@ export default function ProfilePage() {
     const [crushCount, setCrushCount] = useState(0);
     const [followerCount, setFollowerCount] = useState(0);
     const [followingCount, setFollowingCount] = useState(0);
+    const [earnedBadges, setEarnedBadges] = useState<(EarnedAchievement & AchievementDef)[]>([]);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -52,14 +54,16 @@ export default function ProfilePage() {
     useEffect(() => {
         if (!userProfile?.id) return;
         async function fetchSocialCounts() {
-            const [crushes, followers, following] = await Promise.all([
+            const [crushes, followers, following, badges] = await Promise.all([
                 crushService.getAdmirerCount(userProfile.id),
                 followService.getFollowerCount(userProfile.id),
                 followService.getFollowingCount(userProfile.id),
+                achievementService.getUserAchievements(userProfile.id),
             ]);
             setCrushCount(crushes);
             setFollowerCount(followers);
             setFollowingCount(following);
+            setEarnedBadges(badges);
         }
         fetchSocialCounts();
     }, [userProfile]);
@@ -193,9 +197,27 @@ export default function ProfilePage() {
                         </div>
 
                         {/* Crush badge - always show if possible */}
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold mb-4">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold mb-3">
                             <Heart size={12} fill={crushCount > 0 ? "currentColor" : "none"} /> {crushCount} {crushCount === 1 ? 'Crush' : 'Crushes'}
                         </div>
+
+                        {/* Achievement Badges */}
+                        {earnedBadges.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mb-4">
+                                {earnedBadges.map((badge) => (
+                                    <div
+                                        key={badge.achievement_key}
+                                        className={`group relative flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-all cursor-default`}
+                                        title={`${badge.title}: ${badge.description}`}
+                                    >
+                                        <span className="text-sm">{badge.icon}</span>
+                                        <span className="text-[10px] font-bold text-zinc-500 group-hover:text-zinc-300 transition-colors hidden sm:inline">
+                                            {badge.title}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className="flex gap-2 mb-1">

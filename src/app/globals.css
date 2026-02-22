@@ -271,3 +271,25 @@ body::after {
 .bg-gradient-conic {
   background: conic-gradient(var(--tw-gradient-stops, from-red-500 via-purple-500 to-red-500));
 }
+
+/* Achievement Celebration Particles */
+@keyframes achievement-particle {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(-20px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-200px) scale(0.5);
+  }
+}
+
+.animate-achievement-particle {
+  animation: achievement-particle 3s ease-out infinite;
+}

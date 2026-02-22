@@ -1,0 +1,4 @@
+﻿src/lib/services/achievements.ts(145,57): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/lib/services/achievements.ts(210,25): error TS7006: Parameter 'earned' implicitly has an 'any' type.
+src/lib/services/achievements.ts(241,21): error TS7006: Parameter 'earned' implicitly has an 'any' type.
+src/lib/services/achievements.ts(242,18): error TS7006: Parameter 'earned' implicitly has an 'any' type.
