@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, Send } from "lucide-react";
+import { ChevronLeft, Send, Paperclip, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getChatMessages, sendMessage, Message } from "@/lib/services/chat";
 import { haptic } from "@/lib/utils/haptic";
+import { AttachmentMenu, AttachmentType } from "@/components/chat/AttachmentMenu";
+import { uploadChatAttachment } from "@/lib/services/upload";
 
 export default function ChatPage() {
     const params = useParams();
@@ -18,6 +20,12 @@ export default function ChatPage() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [supabase] = useState(() => createClient());
+
+    // Attachment States
+    const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState<AttachmentType | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const init = async () => {
@@ -90,6 +98,38 @@ export default function ChatPage() {
             console.error("Failed to send message:", error);
             setNewMessage(tempContent);
             setMessages(prev => prev.filter(m => m.id !== tempMsg.id));
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedAttachmentType || !currentUserId) return;
+
+        setIsUploading(true);
+        try {
+            const { url, metadata } = await uploadChatAttachment(file);
+            const content = "📎 " + (selectedAttachmentType.charAt(0).toUpperCase() + selectedAttachmentType.slice(1));
+
+            const tempMsg: Message = {
+                id: `temp-${Date.now()}`,
+                chat_id: chatId,
+                sender_hash: currentUserId,
+                content,
+                created_at: new Date().toISOString(),
+                attachment_url: url,
+                attachment_type: selectedAttachmentType,
+                attachment_metadata: metadata
+            };
+            setMessages(prev => [...prev, tempMsg]);
+
+            const realMsg = await sendMessage(chatId, content, null, url, selectedAttachmentType, metadata);
+            setMessages(prev => prev.map(m => m.id === tempMsg.id ? realMsg : m));
+        } catch (error) {
+            console.error("Failed to upload/send attachment:", error);
+            alert("Failed to send attachment");
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
@@ -168,11 +208,27 @@ export default function ChatPage() {
                                                 <div className={`max-w-[78%] group`}>
                                                     <div
                                                         className={`px-3.5 py-2 text-[14px] leading-relaxed ${isMe
-                                                                ? 'bg-red-600 text-white rounded-2xl rounded-br-md'
-                                                                : 'bg-zinc-800/80 text-zinc-200 rounded-2xl rounded-bl-md border border-white/[0.04]'
+                                                            ? 'bg-red-600 text-white rounded-2xl rounded-br-md block'
+                                                            : 'bg-zinc-800/80 text-zinc-200 rounded-2xl rounded-bl-md border border-white/[0.04] block'
                                                             }`}
                                                     >
-                                                        {msg.content}
+                                                        {msg.attachment_url && msg.attachment_type === 'image' && (
+                                                            <div className="mb-2 -mx-2 -mt-1 overflow-hidden rounded-xl bg-black/20">
+                                                                <img src={msg.attachment_url} alt="attachment" className="w-full max-h-48 object-cover" />
+                                                            </div>
+                                                        )}
+                                                        {msg.attachment_url && msg.attachment_type === 'document' && (
+                                                            <a href={msg.attachment_url} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 mb-2 rounded-lg text-xs font-semibold ${isMe ? 'bg-red-700/50 border border-red-400/30 text-white' : 'bg-zinc-700/50 border border-zinc-600'}`}>
+                                                                <FileText size={16} />
+                                                                <span className="truncate">{msg.attachment_metadata?.name || 'Document'}</span>
+                                                            </a>
+                                                        )}
+                                                        {msg.attachment_url && msg.attachment_type === 'audio' && (
+                                                            <div className="mb-2">
+                                                                <audio controls src={msg.attachment_url} className="h-8 max-w-[200px]" />
+                                                            </div>
+                                                        )}
+                                                        <span className="break-words whitespace-pre-wrap">{msg.content}</span>
                                                     </div>
                                                     <span className={`text-[10px] text-zinc-600 mt-0.5 block opacity-0 group-hover:opacity-100 transition-opacity ${isMe ? 'text-right pr-1' : 'pl-1'}`}>
                                                         {formatTime(msg.created_at)}
@@ -188,29 +244,72 @@ export default function ChatPage() {
                     )}
                 </div>
             </div>
+            {isUploading && (
+                <div className="fixed bottom-20 right-4 z-50">
+                    <div className="bg-zinc-800 text-white rounded-2xl p-3 text-sm flex items-center gap-2 border border-white/10 shadow-xl">
+                        <div className="w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+                        <span className="opacity-90">Uploading {selectedAttachmentType}...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Attachment Menu Popup */}
+            <AttachmentMenu
+                isOpen={isAttachmentMenuOpen}
+                onClose={() => setIsAttachmentMenuOpen(false)}
+                onSelect={(type) => {
+                    setIsAttachmentMenuOpen(false);
+                    setSelectedAttachmentType(type);
+                    if (type === 'image' || type === 'document' || type === 'audio') {
+                        if (fileInputRef.current) {
+                            if (type === 'image') fileInputRef.current.accept = "image/*";
+                            if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                            if (type === 'audio') fileInputRef.current.accept = "audio/*";
+                            fileInputRef.current.click();
+                        }
+                    }
+                }}
+            />
+
+            {/* Hidden File Input */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+            />
 
             {/* Input */}
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#030303]/90 backdrop-blur-xl border-t border-white/[0.06] pb-safe">
                 <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                    className="flex items-center gap-2 px-4 py-3 max-w-2xl mx-auto"
+                    className="flex flex-col gap-2 px-4 py-3 max-w-2xl mx-auto"
                 >
-                    <div className="flex-1 bg-zinc-900/80 rounded-full border border-white/[0.06] focus-within:border-white/[0.12] transition-colors">
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            className="w-full px-4 py-2.5 bg-transparent text-sm focus:outline-none placeholder:text-zinc-600"
-                        />
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                            className="p-2.5 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+                        >
+                            <Paperclip size={20} />
+                        </button>
+                        <div className="flex-1 bg-zinc-900/80 rounded-full border border-white/[0.06] focus-within:border-white/[0.12] transition-colors relative">
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                placeholder="Type a message..."
+                                className="w-full px-4 py-2.5 bg-transparent text-sm focus:outline-none placeholder:text-zinc-600"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="p-2.5 rounded-full bg-red-600 text-white disabled:bg-zinc-800 disabled:text-zinc-600 transition-all active:scale-90 shrink-0"
+                            disabled={!newMessage.trim()}
+                        >
+                            <Send size={16} />
+                        </button>
                     </div>
-                    <button
-                        type="submit"
-                        className="p-2.5 rounded-full bg-red-600 text-white disabled:bg-zinc-800 disabled:text-zinc-600 transition-all active:scale-90"
-                        disabled={!newMessage.trim()}
-                    >
-                        <Send size={16} />
-                    </button>
                 </form>
             </div>
         </div>

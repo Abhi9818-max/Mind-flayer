@@ -114,7 +114,10 @@ function RoomChatContent() {
                         avatar_url: profile?.avatar_url
                     };
 
-                    setMessages(prev => [...prev, newMsg].slice(-MAX_MESSAGES));
+                    setMessages(prev => {
+                        if (prev.some(m => m.id === newMsg.id)) return prev;
+                        return [...prev, newMsg].slice(-MAX_MESSAGES);
+                    });
                     scrollToBottom();
                 }
             )
@@ -135,13 +138,40 @@ function RoomChatContent() {
         const content = newMessage.trim();
         setNewMessage("");
 
-        const { error } = await supabase
+        const tempId = `temp-${Date.now()}`;
+        const tempMsg: Message = {
+            id: tempId,
+            username: isAnonymous ? 'Anonymous' : 'You',
+            content,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isAnonymous: isAnonymous,
+            user_id: userId,
+        };
+
+        // Optimistic UI update
+        setMessages(prev => {
+            if (prev.some(m => m.id === tempId)) return prev;
+            return [...prev, tempMsg].slice(-MAX_MESSAGES);
+        });
+        scrollToBottom();
+
+        const { data, error } = await supabase
             .from('live_messages')
-            .insert({ room_id: roomId, content, is_anonymous: isAnonymous, user_id: userId });
+            .insert({ room_id: roomId, content, is_anonymous: isAnonymous, user_id: userId })
+            .select()
+            .single();
 
         if (error) {
             console.error("Failed to send:", error);
             setNewMessage(content);
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+        } else if (data) {
+            // Replace the temporary message with the real one to fix the key
+            setMessages(prev => prev.map(m => m.id === tempId ? {
+                ...tempMsg,
+                id: data.id,
+                timestamp: new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            } : m));
         }
     };
 
@@ -152,18 +182,44 @@ function RoomChatContent() {
         setIsUploading(true);
         try {
             const { url, metadata } = await uploadChatAttachment(file);
+            const content = `[Attached ${selectedAttachmentType}]: ${url}`;
+
+            const tempId = `temp-${Date.now()}`;
+            const tempMsg: Message = {
+                id: tempId,
+                username: isAnonymous ? 'Anonymous' : 'You',
+                content,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isAnonymous: isAnonymous,
+                user_id: userId,
+            };
+
+            // Optimistic UI update
+            setMessages(prev => {
+                if (prev.some(m => m.id === tempId)) return prev;
+                return [...prev, tempMsg].slice(-MAX_MESSAGES);
+            });
+            scrollToBottom();
 
             // Send room message with attachment
-            // Note: Since public rooms don't display sophisticated media yet, 
-            // we'll send a text format but eventually public rooms need attachment columns
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('live_messages')
                 .insert({
                     room_id: roomId,
-                    content: `[Attached ${selectedAttachmentType}]: ${url}`,
+                    content,
                     is_anonymous: isAnonymous,
                     user_id: userId
-                });
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            if (data) {
+                setMessages(prev => prev.map(m => m.id === tempId ? {
+                    ...tempMsg,
+                    id: data.id,
+                    timestamp: new Date(data.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                } : m));
+            }
 
         } catch (error) {
             console.error("Failed to upload/send attachment:", error);
