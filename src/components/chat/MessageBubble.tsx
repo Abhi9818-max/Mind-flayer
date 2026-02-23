@@ -71,8 +71,14 @@ export function MessageBubble({ message, isMe, onReply }: MessageBubbleProps) {
                     >
                         {/* Attachments */}
                         {message.attachment_url && message.attachment_type === 'image' && (
-                            <div className="mb-2 -mx-2 -mt-1 overflow-hidden rounded-xl">
-                                <img src={message.attachment_url} alt="attachment" className="w-full max-h-48 object-cover hover:scale-105 transition-transform cursor-pointer" />
+                            <div className="relative mb-2 -mx-2 -mt-1 group overflow-hidden rounded-[14px] bg-black/40 border border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.5)]">
+                                <img
+                                    src={message.attachment_url}
+                                    alt="attachment"
+                                    className="w-full max-h-[300px] object-cover transition-transform duration-500 ease-out group-hover:scale-105 cursor-pointer"
+                                />
+                                {/* Subtle inner glow */}
+                                <div className="absolute inset-0 rounded-[14px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] pointer-events-none" />
                             </div>
                         )}
                         {message.attachment_url && message.attachment_type === 'document' && (
@@ -87,7 +93,10 @@ export function MessageBubble({ message, isMe, onReply }: MessageBubbleProps) {
                             </div>
                         )}
 
-                        <span className="whitespace-pre-wrap">{message.content}</span>
+                        {/* Hide the text content if it's just the default attachment string to look cleaner */}
+                        {!(message.content.startsWith('[Attached image]: ') || message.content.startsWith('📎 Image')) && (
+                            <span className="whitespace-pre-wrap">{message.content}</span>
+                        )}
                     </div>
                 </div>
             </motion.div>

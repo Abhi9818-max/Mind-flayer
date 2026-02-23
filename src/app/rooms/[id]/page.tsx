@@ -320,12 +320,40 @@ function RoomChatContent() {
                                             </span>
                                         )}
                                         <div
-                                            className={`px-3.5 py-2 text-[13px] leading-relaxed ${isMe
+                                            className={`px-3.5 py-2 text-[13px] leading-relaxed relative ${isMe
                                                 ? 'bg-red-600 text-white rounded-2xl rounded-br-md'
                                                 : 'bg-zinc-800/80 text-zinc-200 rounded-2xl rounded-bl-md border border-white/[0.04]'
                                                 }`}
                                         >
-                                            {msg.content}
+                                            {/* Render parsed attachments from content string */}
+                                            {msg.content.startsWith('[Attached image]:') && (
+                                                <div className="relative mb-2 mt-1 -mx-2 group overflow-hidden rounded-[12px] bg-black/40 border border-white/5 shadow-md">
+                                                    <img
+                                                        src={msg.content.replace('[Attached image]: ', '').trim()}
+                                                        alt="attachment"
+                                                        className="w-full max-h-[250px] object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] cursor-pointer"
+                                                    />
+                                                    <div className="absolute inset-0 rounded-[12px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)] pointer-events-none" />
+                                                </div>
+                                            )}
+
+                                            {msg.content.startsWith('[Attached document]:') && (
+                                                <a href={msg.content.replace('[Attached document]: ', '').trim()} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 mb-2 mt-1 rounded-lg text-xs font-semibold ${isMe ? 'bg-red-700/50 hover:bg-red-700 border border-red-400/30' : 'bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600'}`}>
+                                                    <Paperclip size={16} />
+                                                    <span className="truncate">Attached Document</span>
+                                                </a>
+                                            )}
+
+                                            {msg.content.startsWith('[Attached audio]:') && (
+                                                <div className="mb-2 mt-1">
+                                                    <audio controls src={msg.content.replace('[Attached audio]: ', '').trim()} className="h-8 max-w-[200px]" />
+                                                </div>
+                                            )}
+
+                                            {/* Hide the text content if it's an attachment to look premium */}
+                                            {!(msg.content.startsWith('[Attached image]:') || msg.content.startsWith('[Attached document]:') || msg.content.startsWith('[Attached audio]:')) && (
+                                                <span className="whitespace-pre-wrap">{msg.content}</span>
+                                            )}
                                         </div>
                                         <span className={`text-[9px] text-zinc-700 mt-0.5 block ${isMe ? 'text-right pr-1' : 'pl-1'}`}>
                                             {msg.timestamp}

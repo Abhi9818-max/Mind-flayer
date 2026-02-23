@@ -86,8 +86,13 @@ export function DyingMessageBubble({ message, onReply }: DyingMessageBubbleProps
 
                         {/* Attachments */}
                         {message.attachment_url && message.attachment_type === 'image' && (
-                            <div className="mb-2 -mx-2 -mt-1 overflow-hidden rounded-xl border border-red-900/20">
-                                <img src={message.attachment_url} alt="attachment" className="w-full max-h-48 object-cover hover:scale-105 transition-transform cursor-pointer grayscale-[50%] sepia-[20%] hue-rotate-[-30deg]" />
+                            <div className="relative mb-2 -mx-2 -mt-1 group overflow-hidden rounded-[10px] bg-black/60 border border-red-900/30 shadow-[0_4px_20px_rgba(255,0,0,0.1)]">
+                                <img
+                                    src={message.attachment_url}
+                                    alt="attachment"
+                                    className="w-full max-h-[250px] object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03] cursor-pointer grayscale-[60%] sepia-[30%] hue-rotate-[-30deg]"
+                                />
+                                <div className="absolute inset-0 rounded-[10px] shadow-[inset_0_0_0_1px_rgba(255,0,0,0.15)] pointer-events-none" />
                             </div>
                         )}
                         {message.attachment_url && message.attachment_type === 'document' && (
@@ -102,9 +107,11 @@ export function DyingMessageBubble({ message, onReply }: DyingMessageBubbleProps
                             </div>
                         )}
 
-                        <p className="text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
-                            {message.content}
-                        </p>
+                        {!(message.content.startsWith('[Attached image]: ') || message.content.startsWith('📎 Image')) && (
+                            <p className="text-sm text-zinc-400 leading-relaxed break-words whitespace-pre-wrap">
+                                {message.content}
+                            </p>
+                        )}
                     </div>
                 </div>
             </motion.div>
