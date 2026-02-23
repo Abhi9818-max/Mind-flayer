@@ -157,7 +157,7 @@ export default function DyingRoomPage() {
 
         // Real-time subscription
         const channel = supabase
-            .channel("dying_room")
+            .channel(`dying_room-${Date.now()}-${Math.random()}`)
             .on("postgres_changes", {
                 event: "INSERT",
                 schema: "public",

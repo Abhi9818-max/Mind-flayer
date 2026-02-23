@@ -58,7 +58,7 @@ export function ChatWindow({
     // Realtime Subscription
     useEffect(() => {
         const channel = supabase
-            .channel(`chat:${chatId}`)
+            .channel(`chat:${chatId}-${Date.now()}-${Math.random()}`)
             .on(
                 'postgres_changes',
                 {

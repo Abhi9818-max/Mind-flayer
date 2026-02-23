@@ -93,7 +93,7 @@ function RoomChatContent() {
         fetchMessages();
 
         const channel = supabase
-            .channel(`room:${roomId}`)
+            .channel(`room:${roomId}-${Date.now()}-${Math.random()}`)
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'live_messages', filter: `room_id=eq.${roomId}` },
