@@ -121,12 +121,18 @@ function RoomChatContent() {
                     scrollToBottom();
                 }
             )
-            .subscribe((status: string) => {
-                if (status === 'SUBSCRIBED') setStatus('CONNECTED');
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setStatus('DISCONNECTED');
+            .subscribe((status: string, err: any) => {
+                if (status === 'SUBSCRIBED') {
+                    setStatus('CONNECTED');
+                } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.error("Room Subscription Error/Closed:", status, err);
+                    setStatus('DISCONNECTED');
+                }
             });
 
-        return () => { supabase.removeChannel(channel); };
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [roomId, supabase]);
 
     const scrollToBottom = () => {

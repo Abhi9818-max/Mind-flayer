@@ -31,11 +31,13 @@ VALUES ('chat_attachments', 'chat_attachments', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow public read access to chat attachments
+DROP POLICY IF EXISTS "Public Read Access to Chat Attachments" ON storage.objects;
 CREATE POLICY "Public Read Access to Chat Attachments"
     ON storage.objects FOR SELECT
     USING (bucket_id = 'chat_attachments');
 
 -- Allow authenticated users to upload attachments
+DROP POLICY IF EXISTS "Auth Users Upload Attachments" ON storage.objects;
 CREATE POLICY "Auth Users Upload Attachments"
     ON storage.objects FOR INSERT
     WITH CHECK (
@@ -44,6 +46,7 @@ CREATE POLICY "Auth Users Upload Attachments"
     );
 
 -- Allow users to delete their own uploaded attachments
+DROP POLICY IF EXISTS "Users Delete Own Attachments" ON storage.objects;
 CREATE POLICY "Users Delete Own Attachments"
     ON storage.objects FOR DELETE
     USING (
