@@ -176,44 +176,45 @@ export async function recordProfileView(targetId: string, targetCollege?: string
  * Shadow Aura: Check if a user is in the top 5% of their college by crush count.
  */
 export async function hasShadowAura(userId: string, collegeName?: string): Promise<boolean> {
-    const supabase = createClient();
+    try {
+        const supabase = createClient();
 
-    // If no college provided, fetch it
-    let targetCollege = collegeName;
-    if (!targetCollege) {
-        const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('college_name')
-            .eq('id', userId)
-            .single();
-        targetCollege = profile?.college_name;
+        // If no college provided, fetch it
+        let targetCollege = collegeName;
+        if (!targetCollege) {
+            const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('college_name')
+                .eq('id', userId)
+                .single();
+            targetCollege = profile?.college_name;
+        }
+
+        if (!targetCollege) return false;
+
+        const { data: rankings, error } = await supabase
+            .rpc('get_college_crush_rankings', { target_college: targetCollege });
+
+        if (error || !rankings) {
+            // Fallback: If no RPC exists, just check for a high minimum (e.g., 20 crushes)
+            try {
+                const { count } = await supabase
+                    .from('user_crushes')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('target_id', userId);
+                return (count || 0) >= 20;
+            } catch {
+                return false;
+            }
+        }
+
+        const userRank = rankings.find((r: any) => r.user_id === userId);
+        if (!userRank) return false;
+
+        const percentile = (userRank.rank / rankings.length);
+        return percentile <= 0.05; // Top 5%
+    } catch (e) {
+        console.error("hasShadowAura failed (graceful fallback):", e);
+        return false;
     }
-
-    if (!targetCollege) return false;
-
-    // Logic:
-    // 1. Get crash counts for all users in this college
-    // 2. See if the target user's count is in the top 5%
-
-    // This is an expensive query for real-time. 
-    // Optimization: For now, we'll check if they have at least 10 crushes AND are in the top 5% of users with at least 1 crush.
-
-    const { data: rankings, error } = await supabase
-        .rpc('get_college_crush_rankings', { target_college: targetCollege });
-
-    if (error || !rankings) {
-        // Fallback: If no RPC exists, just check for a high minimum (e.g., 20 crushes)
-        const { count } = await supabase
-            .from('user_crushes')
-            .select('*', { count: 'exact', head: true })
-            .eq('target_id', userId);
-
-        return (count || 0) >= 20;
-    }
-
-    const userRank = rankings.find((r: any) => r.user_id === userId);
-    if (!userRank) return false;
-
-    const percentile = (userRank.rank / rankings.length);
-    return percentile <= 0.05; // Top 5%
 }

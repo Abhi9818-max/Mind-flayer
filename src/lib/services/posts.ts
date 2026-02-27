@@ -106,11 +106,18 @@ export async function getPosts(filterType: PostType | 'all' = 'all') {
         const realLikeCount = post.likes?.[0]?.count ?? post.like_count ?? 0;
         const realCommentCount = post.comments?.[0]?.count ?? post.comment_count ?? 0;
 
-        // Shadow Aura check (optimized: only for non-anonymous authors)
+        // Shadow Aura check (optimized: only for non-anonymous authors, with timeout)
         let auraActive = false;
         if (!post.is_anonymous && post.user_id) {
-            const { hasShadowAura } = await import('./user');
-            auraActive = await hasShadowAura(post.user_id, authorData?.college_name);
+            try {
+                const { hasShadowAura } = await import('./user');
+                auraActive = await Promise.race([
+                    hasShadowAura(post.user_id, authorData?.college_name),
+                    new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('aura_timeout')), 3000))
+                ]);
+            } catch {
+                auraActive = false;
+            }
         }
 
         return {

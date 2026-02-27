@@ -70,9 +70,16 @@ export default function ProfilePage() {
             setEarnedBadges(badges);
             setProfileViewsCount(views);
 
-            // Check for Shadow Aura
-            const hasAura = await hasShadowAura(userProfile.id, userProfile.college_name);
-            setIsShadowAuraActive(hasAura);
+            // Check for Shadow Aura (with timeout — non-blocking)
+            try {
+                const hasAura = await Promise.race([
+                    hasShadowAura(userProfile.id, userProfile.college_name),
+                    new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('aura_timeout')), 3000))
+                ]);
+                setIsShadowAuraActive(hasAura);
+            } catch {
+                setIsShadowAuraActive(false);
+            }
         }
         fetchSocialCounts();
     }, [userProfile]);
