@@ -164,7 +164,7 @@ export default function DyingRoomPage() {
                 table: "dying_room_messages",
             }, async (payload: any) => {
                 // Fetch the reply context if it exists because realtime payloads don't include joins
-                let newMsg = payload.new as DyingMessage;
+                const newMsg = payload.new as DyingMessage;
                 if (newMsg.reply_to_id) {
                     const { data: replyCtx } = await supabase
                         .from('dying_room_messages')

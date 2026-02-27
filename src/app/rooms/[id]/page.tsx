@@ -1,11 +1,55 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronUp, Users, Paperclip, MoreVertical, Smile, Mic } from "lucide-react";
+import { ChevronLeft, ChevronUp, Users, Paperclip, MoreVertical, Smile, Mic, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { AttachmentMenu, AttachmentType } from "@/components/chat/AttachmentMenu";
 import { uploadChatAttachment } from "@/lib/services/upload";
+
+/* ─── Fullscreen Image Lightbox ─── */
+function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handler);
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.removeEventListener("keydown", handler);
+            document.body.style.overflow = "";
+        };
+    }, [onClose]);
+
+    return (
+        <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onClose}
+        >
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
+            <button
+                onClick={onClose}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+                <X size={24} />
+            </button>
+            <motion.img
+                src={src}
+                alt="Full screen"
+                className="relative z-10 max-w-[92vw] max-h-[90vh] object-contain rounded-lg select-none"
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.85, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                onClick={(e) => e.stopPropagation()}
+                draggable={false}
+            />
+        </motion.div>
+    );
+}
 
 interface Message {
     id: string;
@@ -47,6 +91,10 @@ function RoomChatContent() {
     const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedAttachmentType, setSelectedAttachmentType] = useState<AttachmentType | null>(null);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+    const openLightbox = useCallback((src: string) => setLightboxSrc(src), []);
+    const closeLightbox = useCallback(() => setLightboxSrc(null), []);
 
     useEffect(() => {
         supabase.auth.getUser().then((res: any) => {
@@ -237,240 +285,262 @@ function RoomChatContent() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
-            {/* Floating Header Pill */}
-            <div className="absolute top-4 sm:top-6 left-4 right-4 z-50">
-                <div className="bg-[#111111]/90 backdrop-blur-xl border border-white/10 rounded-[30px] px-4 py-3 flex items-center justify-between shadow-2xl">
-                    <button onClick={() => router.back()} className="flex items-center gap-1.5 text-white hover:text-white/80 transition-colors">
-                        <ChevronLeft size={20} />
-                        <span className="text-[15px] font-semibold tracking-tight truncate max-w-[120px]">{room.name}</span>
-                    </button>
+        <>
+            <AnimatePresence>
+                {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={closeLightbox} />}
+            </AnimatePresence>
+            <div className="min-h-screen bg-black text-white flex flex-col relative overflow-hidden">
+                {/* Floating Header Pill */}
+                <div className="absolute top-4 sm:top-6 left-4 right-4 z-50">
+                    <div className="bg-[#111111]/90 backdrop-blur-xl border border-white/10 rounded-[30px] px-4 py-3 flex items-center justify-between shadow-2xl">
+                        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-white hover:text-white/80 transition-colors">
+                            <ChevronLeft size={20} />
+                            <span className="text-[15px] font-semibold tracking-tight truncate max-w-[120px]">{room.name}</span>
+                        </button>
 
-                    <div className="text-white font-mono text-[14px] tracking-widest font-bold opacity-90">
-                        {room.emoji}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 bg-zinc-800/80 px-2 py-1 flex-shrink-0 rounded-full border border-white/5">
-                            <div className={`w-1.5 h-1.5 rounded-full ${status === 'CONNECTED' ? 'bg-green-500' : 'bg-red-500'}`} />
-                            <Users size={12} className="text-zinc-400" />
-                            <span className="text-[11px] text-zinc-300 font-medium">{memberCount}</span>
+                        <div className="text-white font-mono text-[14px] tracking-widest font-bold opacity-90">
+                            {room.emoji}
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto px-4 pt-28 pb-48 w-full bg-black">
-                <div className="max-w-2xl mx-auto space-y-4">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
-                            <p className="text-sm text-zinc-500">Entering {room.name}...</p>
-                        </div>
-                    ) : messages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20">
-                            <div className="text-4xl mb-4 opacity-50">{room.emoji}</div>
-                            <h3 className="text-sm font-semibold text-zinc-500 mb-1">Silence.</h3>
-                        </div>
-                    ) : (
-                        messages.map((msg) => {
-                            const isMe = msg.user_id === userId;
-                            return (
-                                <div key={msg.id} className={`flex w-full mb-4 ${isMe ? 'justify-end' : 'justify-start'} overflow-hidden relative group`}>
-                                    <div className={`flex w-full gap-2 items-end ${isMe ? 'justify-end' : 'justify-start'}`}>
-
-                                        {/* Avatar (For Received) */}
-                                        {!isMe && (
-                                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-auto mb-1 opacity-90">
-                                                {msg.avatar_url && !msg.isAnonymous ? (
-                                                    <img src={msg.avatar_url} alt="avatar" className="w-full h-full object-cover bg-zinc-800" />
-                                                ) : (
-                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} alt="avatar" className="w-full h-full object-cover bg-zinc-800" />
-                                                )}
-                                            </div>
-                                        )}
-
-                                        <div className={`flex flex-col max-w-[80%] sm:max-w-xs ${isMe ? 'items-end' : 'items-start'}`}>
-                                            <div
-                                                className={`relative z-10 break-words px-4 py-3 text-[15px] shadow-sm ${isMe
-                                                        ? 'bg-gradient-to-br from-[#c8d4ff] via-[#dcdbfc] to-[#e4d3f2] text-black rounded-[24px] rounded-br-[4px]'
-                                                        : 'bg-white text-black rounded-[24px] rounded-bl-[4px]'
-                                                    }`}
-                                            >
-                                                {/* Header: Name and Time inside bubble */}
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-bold text-[13px] text-black/90 tracking-tight">
-                                                        {isMe ? 'You' : msg.username}
-                                                    </span>
-                                                    <span className="text-[11px] text-black/40 font-medium">
-                                                        {msg.timestamp}
-                                                    </span>
-                                                </div>
-
-                                                {/* Attachments */}
-                                                {msg.content.startsWith('[Attached image]:') && (
-                                                    <div className="relative mb-2 mt-1 -mx-1 group overflow-hidden rounded-[16px] bg-black/5 shadow-sm">
-                                                        <img
-                                                            src={msg.content.replace('[Attached image]: ', '').trim()}
-                                                            alt="attachment"
-                                                            className="w-full max-h-[250px] object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] cursor-pointer"
-                                                        />
-                                                        <div className="absolute inset-0 rounded-[16px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] pointer-events-none" />
-                                                    </div>
-                                                )}
-
-                                                {msg.content.startsWith('[Attached document]:') && (
-                                                    <a href={msg.content.replace('[Attached document]: ', '').trim()} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 mb-2 mt-1 rounded-xl text-xs font-semibold ${isMe ? 'bg-black/10 hover:bg-black/15' : 'bg-zinc-100 hover:bg-zinc-200'}`}>
-                                                        <Paperclip size={16} />
-                                                        <span className="truncate">Attached Document</span>
-                                                    </a>
-                                                )}
-
-                                                {msg.content.startsWith('[Attached audio]:') && (
-                                                    <div className="mb-2 mt-1">
-                                                        <audio controls src={msg.content.replace('[Attached audio]: ', '').trim()} className="h-8 max-w-[200px]" />
-                                                    </div>
-                                                )}
-
-                                                {/* Message Content */}
-                                                {!(msg.content.startsWith('[Attached image]:') || msg.content.startsWith('[Attached document]:') || msg.content.startsWith('[Attached audio]:')) && (
-                                                    <span className="whitespace-pre-wrap leading-snug text-[15px]">{msg.content}</span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Avatar (For Sent) */}
-                                        {isMe && (
-                                            <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-auto mb-1 opacity-90 shadow-sm border border-black/5">
-                                                {msg.avatar_url && !msg.isAnonymous && !isAnonymous ? (
-                                                    <img src={msg.avatar_url} alt="avatar" className="w-full h-full object-cover bg-[#e4d3f2]" />
-                                                ) : (
-                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} alt="avatar" className="w-full h-full object-cover bg-[#e4d3f2]" />
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
-
-                    {isUploading && (
-                        <div className="flex items-center justify-end animate-fade-in-up mt-2">
-                            <div className="bg-gradient-to-br from-[#c8d4ff] to-[#e4d3f2] text-black rounded-[24px] rounded-br-[4px] px-4 py-2 text-sm flex items-center gap-2 shadow-sm font-semibold">
-                                <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                                <span>Uploading {selectedAttachmentType}...</span>
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 bg-zinc-800/80 px-2 py-1 flex-shrink-0 rounded-full border border-white/5">
+                                <div className={`w-1.5 h-1.5 rounded-full ${status === 'CONNECTED' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <Users size={12} className="text-zinc-400" />
+                                <span className="text-[11px] text-zinc-300 font-medium">{memberCount}</span>
                             </div>
                         </div>
-                    )}
-
-                    <div ref={messagesEndRef} className="h-4" />
-                </div>
-            </div>
-
-            {/* Bottom Input UI */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none pb-safe max-w-2xl mx-auto w-full">
-
-                {/* Mode Toggle & Floating Buttons */}
-                <div className="flex items-end justify-between px-6 mb-3 pointer-events-auto">
-                    <button
-                        onClick={() => setIsAnonymous(!isAnonymous)}
-                        className={`px-4 py-1.5 rounded-full text-[12px] font-semibold border transition-all shadow-lg ${isAnonymous
-                            ? 'bg-zinc-800/90 border-white/10 text-zinc-300 backdrop-blur-md'
-                            : 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300 backdrop-blur-md'
-                            }`}
-                    >
-                        {isAnonymous ? '🌑 Anon' : '👤 Public'}
-                    </button>
-
-                    <div className="flex gap-3">
-                        <button className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center text-black hover:scale-105 transition-transform">
-                            <Smile ml-0 size={24} className="text-zinc-600" />
-                        </button>
-                        <button className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-20 group-hover:opacity-40 transition-opacity" />
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="url(#gradient-mic-room)" stroke="none" xmlns="http://www.w3.org/2000/svg" className="z-10 relative">
-                                <path d="M12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2ZM19 11C19 14.53 16.39 17.44 13 17.93V21H11V17.93C7.61 17.44 5 14.53 5 11H7C7 13.76 9.24 16 12 16C14.76 16 17 13.76 17 11H19Z" />
-                            </svg>
-                            <svg width="0" height="0">
-                                <linearGradient id="gradient-mic-room" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop stopColor="#6366f1" offset="0%" />
-                                    <stop stopColor="#ec4899" offset="100%" />
-                                </linearGradient>
-                            </svg>
-                        </button>
                     </div>
                 </div>
 
-                {/* Main Input Pill */}
-                <div className="px-4 pb-6 w-full pointer-events-auto">
-                    <form
-                        onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                        className="flex items-center bg-white rounded-[32px] p-2 shadow-2xl"
-                    >
-                        <button
-                            type="button"
-                            onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
-                            className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${isAttachmentMenuOpen ? 'bg-zinc-100 text-black' : 'text-zinc-400 hover:text-black hover:bg-zinc-50'}`}
-                        >
-                            <Paperclip size={22} className={isAttachmentMenuOpen ? "transform rotate-45 transition-transform" : "transition-transform"} />
-                        </button>
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto px-4 pt-28 pb-48 w-full bg-black">
+                    <div className="max-w-2xl mx-auto space-y-4">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+                                <p className="text-sm text-zinc-500">Entering {room.name}...</p>
+                            </div>
+                        ) : messages.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20">
+                                <div className="text-4xl mb-4 opacity-50">{room.emoji}</div>
+                                <h3 className="text-sm font-semibold text-zinc-500 mb-1">Silence.</h3>
+                            </div>
+                        ) : (
+                            messages.map((msg) => {
+                                const isMe = msg.user_id === userId;
+                                return (
+                                    <div key={msg.id} className={`flex w-full mb-4 ${isMe ? 'justify-end' : 'justify-start'} overflow-hidden relative group`}>
+                                        <div className={`flex w-full gap-2 items-end ${isMe ? 'justify-end' : 'justify-start'}`}>
 
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                            placeholder={isAnonymous ? "Type anonymously..." : "Type a message..."}
-                            className="flex-1 bg-transparent px-2 py-2 text-[16px] text-black placeholder-zinc-400 font-medium focus:outline-none"
-                            maxLength={500}
-                        />
+                                            {/* Avatar (For Received) */}
+                                            {!isMe && (
+                                                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-auto mb-1 opacity-90">
+                                                    {msg.avatar_url && !msg.isAnonymous ? (
+                                                        <img src={msg.avatar_url} alt="avatar" className="w-full h-full object-cover bg-zinc-800" />
+                                                    ) : (
+                                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} alt="avatar" className="w-full h-full object-cover bg-zinc-800" />
+                                                    )}
+                                                </div>
+                                            )}
 
-                        <button
-                            type="submit"
-                            disabled={!newMessage.trim() || !userId}
-                            className="w-12 h-12 shrink-0 rounded-full bg-zinc-100 flex items-center justify-center text-black disabled:opacity-50 transition-colors ml-1 hover:bg-zinc-200"
-                        >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="18 15 12 9 6 15"></polyline>
-                            </svg>
-                        </button>
-                    </form>
-                    {!userId && (
-                        <div className="flex justify-center mt-2">
-                            <span className="text-[11px] text-red-400 pointer-events-none">Log in to chat</span>
-                        </div>
-                    )}
+                                            <div className={`flex flex-col max-w-[80%] sm:max-w-xs ${isMe ? 'items-end' : 'items-start'}`}>
+                                                <div
+                                                    className={`relative z-10 break-words px-4 py-3 text-[15px] shadow-sm ${isMe
+                                                        ? 'bg-gradient-to-br from-[#c8d4ff] via-[#dcdbfc] to-[#e4d3f2] text-black rounded-[24px] rounded-br-[4px]'
+                                                        : 'bg-white text-black rounded-[24px] rounded-bl-[4px]'
+                                                        }`}
+                                                >
+                                                    {/* Header: Name and Time inside bubble */}
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold text-[13px] text-black/90 tracking-tight">
+                                                            {isMe ? 'You' : msg.username}
+                                                        </span>
+                                                        <span className="text-[11px] text-black/40 font-medium">
+                                                            {msg.timestamp}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Attachments */}
+                                                    {msg.content.startsWith('[Attached image]:') && (() => {
+                                                        const imgSrc = msg.content.replace('[Attached image]: ', '').trim();
+                                                        return (
+                                                            <div
+                                                                className="relative mb-2 mt-1 -mx-1 overflow-hidden rounded-[16px] bg-black/5 shadow-sm cursor-pointer group/img"
+                                                                onClick={() => openLightbox(imgSrc)}
+                                                            >
+                                                                <img
+                                                                    src={imgSrc}
+                                                                    alt="attachment"
+                                                                    className="w-full max-h-[250px] object-cover transition-transform duration-500 ease-out group-hover/img:scale-[1.03]"
+                                                                    draggable={false}
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors duration-300 flex items-center justify-center">
+                                                                    <div className="opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 bg-black/50 rounded-full p-2">
+                                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                            <polyline points="15 3 21 3 21 9" />
+                                                                            <polyline points="9 21 3 21 3 15" />
+                                                                            <line x1="21" y1="3" x2="14" y2="10" />
+                                                                            <line x1="3" y1="21" x2="10" y2="14" />
+                                                                        </svg>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="absolute inset-0 rounded-[16px] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] pointer-events-none" />
+                                                            </div>
+                                                        );
+                                                    })()}
+
+                                                    {msg.content.startsWith('[Attached document]:') && (
+                                                        <a href={msg.content.replace('[Attached document]: ', '').trim()} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 p-2 mb-2 mt-1 rounded-xl text-xs font-semibold ${isMe ? 'bg-black/10 hover:bg-black/15' : 'bg-zinc-100 hover:bg-zinc-200'}`}>
+                                                            <Paperclip size={16} />
+                                                            <span className="truncate">Attached Document</span>
+                                                        </a>
+                                                    )}
+
+                                                    {msg.content.startsWith('[Attached audio]:') && (
+                                                        <div className="mb-2 mt-1">
+                                                            <audio controls src={msg.content.replace('[Attached audio]: ', '').trim()} className="h-8 max-w-[200px]" />
+                                                        </div>
+                                                    )}
+
+                                                    {/* Message Content */}
+                                                    {!(msg.content.startsWith('[Attached image]:') || msg.content.startsWith('[Attached document]:') || msg.content.startsWith('[Attached audio]:')) && (
+                                                        <span className="whitespace-pre-wrap leading-snug text-[15px]">{msg.content}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Avatar (For Sent) */}
+                                            {isMe && (
+                                                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mt-auto mb-1 opacity-90 shadow-sm border border-black/5">
+                                                    {msg.avatar_url && !msg.isAnonymous && !isAnonymous ? (
+                                                        <img src={msg.avatar_url} alt="avatar" className="w-full h-full object-cover bg-[#e4d3f2]" />
+                                                    ) : (
+                                                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} alt="avatar" className="w-full h-full object-cover bg-[#e4d3f2]" />
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+
+                        {isUploading && (
+                            <div className="flex items-center justify-end animate-fade-in-up mt-2">
+                                <div className="bg-gradient-to-br from-[#c8d4ff] to-[#e4d3f2] text-black rounded-[24px] rounded-br-[4px] px-4 py-2 text-sm flex items-center gap-2 shadow-sm font-semibold">
+                                    <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                                    <span>Uploading {selectedAttachmentType}...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div ref={messagesEndRef} className="h-4" />
+                    </div>
                 </div>
-            </div>
 
-            <AttachmentMenu
-                isOpen={isAttachmentMenuOpen}
-                onClose={() => setIsAttachmentMenuOpen(false)}
-                onSelect={(type) => {
-                    setIsAttachmentMenuOpen(false);
-                    setSelectedAttachmentType(type);
-                    if (type === 'image' || type === 'document' || type === 'audio') {
-                        if (fileInputRef.current) {
-                            if (type === 'image') fileInputRef.current.accept = "image/*";
-                            if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
-                            if (type === 'audio') fileInputRef.current.accept = "audio/*";
-                            fileInputRef.current.click();
+                {/* Bottom Input UI */}
+                <div className="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none pb-safe max-w-2xl mx-auto w-full">
+
+                    {/* Mode Toggle & Floating Buttons */}
+                    <div className="flex items-end justify-between px-6 mb-3 pointer-events-auto">
+                        <button
+                            onClick={() => setIsAnonymous(!isAnonymous)}
+                            className={`px-4 py-1.5 rounded-full text-[12px] font-semibold border transition-all shadow-lg ${isAnonymous
+                                ? 'bg-zinc-800/90 border-white/10 text-zinc-300 backdrop-blur-md'
+                                : 'bg-indigo-500/20 border-indigo-500/30 text-indigo-300 backdrop-blur-md'
+                                }`}
+                        >
+                            {isAnonymous ? '🌑 Anon' : '👤 Public'}
+                        </button>
+
+                        <div className="flex gap-3">
+                            <button className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center text-black hover:scale-105 transition-transform">
+                                <Smile ml-0 size={24} className="text-zinc-600" />
+                            </button>
+                            <button className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-105 transition-transform relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-20 group-hover:opacity-40 transition-opacity" />
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="url(#gradient-mic-room)" stroke="none" xmlns="http://www.w3.org/2000/svg" className="z-10 relative">
+                                    <path d="M12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2ZM19 11C19 14.53 16.39 17.44 13 17.93V21H11V17.93C7.61 17.44 5 14.53 5 11H7C7 13.76 9.24 16 12 16C14.76 16 17 13.76 17 11H19Z" />
+                                </svg>
+                                <svg width="0" height="0">
+                                    <linearGradient id="gradient-mic-room" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop stopColor="#6366f1" offset="0%" />
+                                        <stop stopColor="#ec4899" offset="100%" />
+                                    </linearGradient>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Input Pill */}
+                    <div className="px-4 pb-6 w-full pointer-events-auto">
+                        <form
+                            onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+                            className="flex items-center bg-white rounded-[32px] p-2 shadow-2xl"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+                                className={`w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full transition-colors ${isAttachmentMenuOpen ? 'bg-zinc-100 text-black' : 'text-zinc-400 hover:text-black hover:bg-zinc-50'}`}
+                            >
+                                <Paperclip size={22} className={isAttachmentMenuOpen ? "transform rotate-45 transition-transform" : "transition-transform"} />
+                            </button>
+
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                placeholder={isAnonymous ? "Type anonymously..." : "Type a message..."}
+                                className="flex-1 bg-transparent px-2 py-2 text-[16px] text-black placeholder-zinc-400 font-medium focus:outline-none"
+                                maxLength={500}
+                            />
+
+                            <button
+                                type="submit"
+                                disabled={!newMessage.trim() || !userId}
+                                className="w-12 h-12 shrink-0 rounded-full bg-zinc-100 flex items-center justify-center text-black disabled:opacity-50 transition-colors ml-1 hover:bg-zinc-200"
+                            >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                            </button>
+                        </form>
+                        {!userId && (
+                            <div className="flex justify-center mt-2">
+                                <span className="text-[11px] text-red-400 pointer-events-none">Log in to chat</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <AttachmentMenu
+                    isOpen={isAttachmentMenuOpen}
+                    onClose={() => setIsAttachmentMenuOpen(false)}
+                    onSelect={(type) => {
+                        setIsAttachmentMenuOpen(false);
+                        setSelectedAttachmentType(type);
+                        if (type === 'image' || type === 'document' || type === 'audio') {
+                            if (fileInputRef.current) {
+                                if (type === 'image') fileInputRef.current.accept = "image/*";
+                                if (type === 'document') fileInputRef.current.accept = ".pdf,.doc,.docx,.txt";
+                                if (type === 'audio') fileInputRef.current.accept = "audio/*";
+                                fileInputRef.current.click();
+                            }
+                        } else {
+                            console.log("Room Attachment Selected:", type);
                         }
-                    } else {
-                        console.log("Room Attachment Selected:", type);
-                    }
-                }}
-            />
+                    }}
+                />
 
-            <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-            />
-        </div>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                />
+            </div>
+        </>
     );
 }
 
